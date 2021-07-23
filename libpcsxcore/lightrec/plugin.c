@@ -17,7 +17,7 @@
 
 #define ARRAY_SIZE(x) (sizeof(x) ? sizeof(x) / sizeof((x)[0]) : 0)
 
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#ifdef PCSX_BIG_ENDIAN
 #	define LE32TOH(x)	__builtin_bswap32(x)
 #	define HTOLE32(x)	__builtin_bswap32(x)
 #	define LE16TOH(x)	__builtin_bswap16(x)
