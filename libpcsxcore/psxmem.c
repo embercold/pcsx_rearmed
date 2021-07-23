@@ -29,7 +29,9 @@
 #include "psxhw.h"
 #include "debug.h"
 
+#ifndef NO_MMAP
 #include "memmap.h"
+#endif // #ifndef NO_MMAP
 
 #ifdef USE_LIBRETRO_VFS
 #include <streams/file_stream_transforms.h>
@@ -50,6 +52,7 @@ void (*psxUnmapHook)(void *ptr, size_t size, enum psxMapTag tag);
 void *psxMap(unsigned long addr, size_t size, int is_fixed,
 		enum psxMapTag tag)
 {
+#ifndef NO_MMAP
 #ifdef LIGHTREC
 #ifdef MAP_FIXED_NOREPLACE
 	int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE;
@@ -104,10 +107,14 @@ retry:
 	}
 
 	return ret;
+#else
+	return malloc(size);
+#endif // #ifndef NO_MMAP
 }
 
 void psxUnmap(void *ptr, size_t size, enum psxMapTag tag)
 {
+#ifndef NO_MMAP
 	if (psxUnmapHook != NULL) {
 		psxUnmapHook(ptr, size, tag);
 		return;
@@ -115,6 +122,9 @@ void psxUnmap(void *ptr, size_t size, enum psxMapTag tag)
 
 	if (ptr)
 		munmap(ptr, size);
+#else
+	free(ptr);
+#endif // #ifndef NO_MMAP
 }
 
 s8 *psxM = NULL; // Kernel & User Memory (2 Meg)

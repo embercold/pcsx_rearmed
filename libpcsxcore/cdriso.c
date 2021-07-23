@@ -31,6 +31,12 @@
 #include <chd.h>
 #endif
 
+// Allow the file to build without OS threads support (disables CDDA also)
+#if defined(NO_PTHREAD) && !defined(_WIN32)
+#define NO_THREADS
+#endif
+
+#ifndef NO_THREADS
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <process.h>
@@ -42,6 +48,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #endif
+#endif // #ifndef NO_THREADS
 
 #ifdef USE_LIBRETRO_VFS
 #include <streams/file_stream_transforms.h>
@@ -72,11 +79,14 @@ static unsigned char sndbuffer[CD_FRAMESIZE_RAW * 10];
 
 #define CDDA_FRAMETIME			(1000 * (sizeof(sndbuffer) / CD_FRAMESIZE_RAW) / 75)
 
+#ifndef NO_THREADS
 #ifdef _WIN32
 static HANDLE threadid;
 #else
 static pthread_t threadid;
 #endif
+#endif // #ifndef NO_THREADS
+
 static unsigned int initial_offset = 0;
 static boolean playing = FALSE;
 static boolean cddaBigEndian = FALSE;
@@ -195,6 +205,7 @@ static long GetTickCount(void) {
 }
 #endif
 
+#ifndef NO_THREADS
 // this thread plays audio data
 #ifdef _WIN32
 static void playthread(void *param)
@@ -288,6 +299,7 @@ static void *playthread(void *param)
 	return NULL;
 #endif
 }
+#endif // #ifndef NO_THREADS
 
 // stop the CDDA playback
 static void stopCDDA() {
@@ -296,11 +308,13 @@ static void stopCDDA() {
 	}
 
 	playing = FALSE;
+#ifndef NO_THREADS
 #ifdef _WIN32
 	WaitForSingleObject(threadid, INFINITE);
 #else
 	pthread_join(threadid, NULL);
 #endif
+#endif // #ifndef NO_THREADS
 }
 
 // start the CDDA playback
@@ -311,11 +325,13 @@ static void startCDDA(void) {
 
 	playing = TRUE;
 
+#ifndef NO_THREADS
 #ifdef _WIN32
 	threadid = (HANDLE)_beginthread(playthread, 0, NULL);
 #else
 	pthread_create(&threadid, NULL, playthread, NULL);
 #endif
+#endif // #ifndef NO_THREADS
 }
 
 // this function tries to get the .toc file of the given .bin
@@ -1183,6 +1199,7 @@ static int opensbifile(const char *isoname) {
 	return LoadSBI(sbiname, s);
 }
 
+#ifndef NO_THREADS
 #ifdef _WIN32
 static void readThreadStop() {}
 static void readThreadStart() {}
@@ -1375,6 +1392,7 @@ static void readThreadStart() {
   readThreadStop();
 }
 #endif
+#endif // #ifndef NO_THREADS
 
 static int cdread_normal(FILE *f, unsigned int base, void *dest, int sector)
 {
@@ -1534,6 +1552,7 @@ static int cdread_2048(FILE *f, unsigned int base, void *dest, int sector)
 	return ret;
 }
 
+#ifndef NO_THREADS
 #ifndef _WIN32
 
 static int cdread_async(FILE *f, unsigned int base, void *dest, int sector) {
@@ -1581,6 +1600,7 @@ static int cdread_async(FILE *f, unsigned int base, void *dest, int sector) {
 }
 
 #endif
+#endif // #ifndef NO_THREADS
 
 static unsigned char * CALLBACK ISOgetBuffer_compr(void) {
 	return compr_img->buff_raw[compr_img->sector_in_blk] + 12;
@@ -1592,6 +1612,7 @@ static unsigned char * CALLBACK ISOgetBuffer_chd(void) {
 }
 #endif
 
+#ifndef NO_THREADS
 #ifndef _WIN32
 static unsigned char * CALLBACK ISOgetBuffer_async(void) {
   unsigned char *buffer;
@@ -1600,8 +1621,8 @@ static unsigned char * CALLBACK ISOgetBuffer_async(void) {
   pthread_mutex_unlock(&sectorbuffer_lock);
   return buffer + 12;
 }
-
 #endif
+#endif // #ifndef NO_THREADS
 
 static unsigned char * CALLBACK ISOgetBuffer(void) {
 	return cdbuffer + 12;
@@ -1743,9 +1764,11 @@ static long CALLBACK ISOopen(void) {
 	cdda_cur_sector = 0;
 	cdda_file_offset = 0;
 
+#ifndef NO_THREADS
   if (Config.AsyncCD) {
     readThreadStart();
   }
+#endif
 	return 0;
 }
 
@@ -1791,9 +1814,11 @@ static long CALLBACK ISOclose(void) {
 	memset(cdbuffer, 0, sizeof(cdbuffer));
 	CDR_getBuffer = ISOgetBuffer;
 
+#ifndef NO_THREADS
 	if (Config.AsyncCD) {
 		readThreadStop();
 	}
+#endif // #ifndef NO_THREADS
 
 	return 0;
 }

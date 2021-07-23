@@ -18,7 +18,7 @@
  *                                                                         *
  ***************************************************************************/
 
-#if !defined(_WIN32) && !defined(NO_OS)
+#if !defined(_WIN32) && !defined(NO_OS) && !defined(NO_PTHREAD)
 #include <sys/time.h> // gettimeofday in xa.c
 #define THREAD_ENABLED 1
 #endif
