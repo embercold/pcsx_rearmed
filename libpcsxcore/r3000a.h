@@ -41,7 +41,6 @@ typedef struct {
 extern R3000Acpu *psxCpu;
 extern R3000Acpu psxInt;
 extern R3000Acpu psxRec;
-#define PSXREC
 
 typedef union {
 #ifdef PCSX_BIG_ENDIAN

@@ -5,7 +5,7 @@ WANT_ZLIB ?= 1
 HAVE_CHD ?= 1
 USE_LIBRETRO_VFS ?= 0
 
-# Dynarec options: lightrec, ari64
+# Dynarec options: lightrec, ari64, ppc, none
 DYNAREC ?= lightrec
 
 ifeq ($(platform),)
@@ -290,8 +290,9 @@ else ifneq (,$(filter $(platform),ngc wii wiiu))
 	CFLAGS += -D__ppc__ -D__powerpc__ -DPCSX_BIG_ENDIAN
 	CFLAGS += -DGEKKO -mcpu=750 -meabi -mhard-float
 	CFLAGS += -DNO_DYLIB -DNO_PTHREAD -DNO_MMAP -DFAULTY_POSIX
-	STATIC_LINKING = 1
-	DYNAREC :=
+	STATIC_LINKING := 1
+    BUILTIN_GPU := peops
+	DYNAREC := ppc
 	LIBDL :=
 	LIBPTHREAD :=
 

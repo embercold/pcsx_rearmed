@@ -1630,7 +1630,7 @@ static void update_variables(bool in_flight)
          display_internal_fps = true;
    }
 
-#if defined(LIGHTREC) || defined(NEW_DYNAREC)
+#ifdef PCSX_DYNAREC
    var.value = NULL;
    var.key = "pcsx_rearmed_drc";
 
@@ -1661,7 +1661,7 @@ static void update_variables(bool in_flight)
          psxCpu->Reset(); // not really a reset..
       }
    }
-#endif /* LIGHTREC || NEW_DYNAREC */
+#endif /* PCSX_DYNAREC */
 
    var.value = NULL;
    var.key = "pcsx_rearmed_spu_reverb";

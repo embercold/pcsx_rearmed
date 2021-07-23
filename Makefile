@@ -86,7 +86,7 @@ libpcsxcore/psxbios.o: CFLAGS += -Wno-nonnull
 # dynarec
 ifeq "$(DYNAREC)" "lightrec"
 CFLAGS += -Ideps/lightning/include -Ideps/lightrec \
-		  -DLIGHTREC -DLIGHTREC_STATIC
+		  -DLIGHTREC -DLIGHTREC_STATIC -DPCSX_DYNAREC
 OBJS += libpcsxcore/lightrec/plugin.o
 OBJS += deps/lightning/lib/jit_disasm.o \
 		deps/lightning/lib/jit_memory.o \
@@ -110,13 +110,18 @@ CFLAGS += -Ideps/mman
 OBJS += deps/mman/mman.o
 endif
 else ifeq "$(DYNAREC)" "ari64"
-CFLAGS += -DNEW_DYNAREC
+CFLAGS += -DNEW_DYNAREC -DPCSX_DYNAREC
 OBJS += libpcsxcore/new_dynarec/backends/psx/emu_if.o \
 		libpcsxcore/new_dynarec/new_dynarec.o \
 		libpcsxcore/new_dynarec/arm/linkage_arm.o \
 		libpcsxcore/new_dynarec/backends/psx/pcsxmem.o
 libpcsxcore/new_dynarec/new_dynarec.o: libpcsxcore/new_dynarec/arm/assem_arm.c \
 	libpcsxcore/new_dynarec/backends/psx/pcsxmem_inline.c
+else ifeq "$(DYNAREC)" "ppc"
+CFLAGS += -DPPC_DYNAREC -DPCSX_DYNAREC
+OBJS += libpcsxcore/ppc_dynarec/ppc.o \
+        libpcsxcore/ppc_dynarec/pR3000A.o \
+        libpcsxcore/ppc_dynarec/reguse.o
 else
 OBJS += libpcsxcore/new_dynarec/backends/psx/emu_if.o
 libpcsxcore/new_dynarec/backends/psx/emu_if.o: CFLAGS += -DDRC_DISABLE

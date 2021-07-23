@@ -479,7 +479,7 @@ struct retro_core_option_definition option_defs_us[] = {
 #endif
    },
 
-#if defined(LIGHTREC) || defined(NEW_DYNAREC)
+#ifdef PCSX_DYNAREC
    {
       "pcsx_rearmed_drc",
       "Dynamic Recompiler",
@@ -491,7 +491,7 @@ struct retro_core_option_definition option_defs_us[] = {
       },
       "enabled",
    },
-#endif /* LIGHTREC || NEW_DYNAREC */
+#endif /* #ifdef PCSX_DYNAREC */
 
 #ifdef NEW_DYNAREC
    {

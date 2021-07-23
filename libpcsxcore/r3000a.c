@@ -34,7 +34,7 @@ psxRegisters psxRegs;
 int psxInit() {
 	SysPrintf(_("Running PCSX Version %s (%s).\n"), PCSX_VERSION, __DATE__);
 
-#if defined(NEW_DYNAREC) || defined(LIGHTREC)
+#ifdef PCSX_DYNAREC
 	if (Config.Cpu == CPU_INTERPRETER) {
 		psxCpu = &psxInt;
 	} else psxCpu = &psxRec;
