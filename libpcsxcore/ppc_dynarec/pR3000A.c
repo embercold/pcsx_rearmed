@@ -32,6 +32,14 @@
 #include "../psxhle.h"
 #include "../gte.h"
 
+#if !defined(HW_DOL) && !defined(HW_RVL)
+#error The ppc_dynarec only supports GC/Wii hosts
+#endif
+
+/* Cache control functions from libogc linked with Retroarch */
+void DCFlushRange(void *addr, uint32_t size);
+void ICInvalidateRange(void *addr, uint32_t size);
+
 /* pcsx_rearmed_libretro compatibility shims */
 int stop;
 u32 cycle_multiplier;
@@ -2843,8 +2851,8 @@ static void recRecompile() {
       iRet();
   }
 
-//   DCFlushRange((u8*)ptr,(u32)(u8*)ppcPtr-(u32)(u8*)ptr);
-//   ICInvalidateRange((u8*)ptr,(u32)(u8*)ppcPtr-(u32)(u8*)ptr);
+  DCFlushRange((u8*)ptr,(u32)(u8*)ppcPtr-(u32)(u8*)ptr);
+  ICInvalidateRange((u8*)ptr,(u32)(u8*)ppcPtr-(u32)(u8*)ptr);
   
 #ifdef TAG_CODE
     sprintf((char *)ppcPtr, "PC=%08x", pcold);  //causes misalignment

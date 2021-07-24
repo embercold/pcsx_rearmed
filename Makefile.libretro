@@ -281,8 +281,10 @@ else ifneq (,$(filter $(platform),ngc wii wiiu))
 	CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
 	AR  = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
 	ifeq ($(platform), ngc)
+		DYNAREC := ppc
 		CFLAGS += -DHW_DOL -mrvl
 	else ifeq ($(platform), wii)
+		DYNAREC := ppc
 		CFLAGS += -DHW_RVL -mrvl
 	else ifeq ($(platform), wiiu)
 		CFLAGS += -DHW_WUP -mwup
@@ -292,7 +294,6 @@ else ifneq (,$(filter $(platform),ngc wii wiiu))
 	CFLAGS += -DNO_DYLIB -DNO_PTHREAD -DNO_MMAP -DFAULTY_POSIX
 	STATIC_LINKING := 1
     BUILTIN_GPU := peops
-	DYNAREC := ppc
 	LIBDL :=
 	LIBPTHREAD :=
 
