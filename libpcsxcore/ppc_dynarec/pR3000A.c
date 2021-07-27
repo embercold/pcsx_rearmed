@@ -1012,9 +1012,21 @@ static void rec##f() { \
     iRet(); \
 }
 
+#define CP2_FUNC_NOARGS(f) \
+void gte##f(struct psxCP2Regs *regs); \
+static void rec##f() { \
+    if (pc < cop2readypc) idlecyclecount += ((cop2readypc - pc)>>2); \
+    iFlushRegs(0); \
+    LIW(0, (u32)psxRegs.code); \
+    STW(0, OFFSET(&psxRegs, &psxRegs.code), GetHWRegSpecial(PSXREGS)); \
+    FlushAllHWReg(); \
+    CALLFunc ((u32)gte##f); \
+    cop2readypc = pc + (psxCP2time[_fFunct_(psxRegs.code)]<<2); \
+}
+
 #define CP2_FUNC(f) \
 static void gtethunk##f() { \
-    gte##f(&psxRegs.CP2D); \
+    gte##f((struct psxCP2Regs *) &psxRegs.CP2D); \
 } \
 void gte##f(struct psxCP2Regs *regs); \
 static void rec##f() { \
@@ -1029,7 +1041,7 @@ static void rec##f() { \
 
 #define CP2_FUNCNC(f) \
 static void gtethunk##f() { \
-    gte##f(&psxRegs.CP2D); \
+    gte##f((struct psxCP2Regs *) &psxRegs.CP2D); \
 } \
 void gte##f(struct psxCP2Regs *regs); \
 static void rec##f() { \
@@ -2679,12 +2691,12 @@ static void recCTC0() {
 }
 
 // GTE function callers
-CP2_FUNC(MFC2);
-CP2_FUNC(MTC2);
-CP2_FUNC(CFC2);
-CP2_FUNC(CTC2);
-CP2_FUNC(LWC2);
-CP2_FUNC(SWC2);
+CP2_FUNC_NOARGS(MFC2);
+CP2_FUNC_NOARGS(MTC2);
+CP2_FUNC_NOARGS(CFC2);
+CP2_FUNC_NOARGS(CTC2);
+CP2_FUNC_NOARGS(LWC2);
+CP2_FUNC_NOARGS(SWC2);
 
 CP2_FUNCNC(RTPS);
 CP2_FUNC(OP);
