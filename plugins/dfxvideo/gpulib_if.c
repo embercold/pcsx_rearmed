@@ -327,7 +327,7 @@ int do_cmd_list(uint32_t *list, int list_len, int *last_cmd)
 
   for (; list < list_end; list += 1 + len)
   {
-    cmd = *list >> 24;
+    cmd = LE2HOST32(*list) >> 24;
     len = cmd_lengths[cmd];
     if (list + 1 + len > list_end) {
       cmd = -1;
@@ -357,7 +357,7 @@ int do_cmd_list(uint32_t *list, int list_len, int *last_cmd)
             goto breakloop;
           }
 
-          if((*list_position & 0xf000f000) == 0x50005000)
+          if((LE2HOST32(*list_position) & 0xf000f000) == 0x50005000)
             break;
 
           list_position++;
@@ -380,7 +380,7 @@ int do_cmd_list(uint32_t *list, int list_len, int *last_cmd)
             goto breakloop;
           }
 
-          if((*list_position & 0xf000f000) == 0x50005000)
+          if((LE2HOST32(*list_position) & 0xf000f000) == 0x50005000)
             break;
 
           list_position += 2;
@@ -395,8 +395,8 @@ int do_cmd_list(uint32_t *list, int list_len, int *last_cmd)
       case 0xA0:          //  sys -> vid
       {
         short *slist = (void *)list;
-        u32 load_width = slist[4];
-        u32 load_height = slist[5];
+        u32 load_width = LE2HOST16(slist[4]);
+        u32 load_height = LE2HOST16(slist[5]);
         u32 load_size = load_width * load_height;
 
         len += load_size / 2;

@@ -14,6 +14,49 @@
 
 #include "gpu.h"
 
+#define SWAP16(x) ({ uint16_t y=(x); (((y)>>8 & 0xff) | ((y)<<8 & 0xff00)); })
+#define SWAP32(x) ({ uint32_t y=(x); (((y)>>24 & 0xfful) | ((y)>>8 & 0xff00ul) | ((y)<<8 & 0xff0000ul) | ((y)<<24 & 0xff000000ul)); })
+
+#ifdef PCSX_BIG_ENDIAN
+
+// big endian config
+#define HOST2LE32(x) SWAP32(x)
+#define HOST2BE32(x) (x)
+#define LE2HOST32(x) SWAP32(x)
+#define BE2HOST32(x) (x)
+
+#define HOST2LE16(x) SWAP16(x)
+#define HOST2BE16(x) (x)
+#define LE2HOST16(x) SWAP16(x)
+#define BE2HOST16(x) (x)
+
+#else
+
+// little endian config
+#define HOST2LE32(x) (x)
+#define HOST2BE32(x) SWAP32(x)
+#define LE2HOST32(x) (x)
+#define BE2HOST32(x) SWAP32(x)
+
+#define HOST2LE16(x) (x)
+#define HOST2BE16(x) SWAP16(x)
+#define LE2HOST16(x) (x)
+#define BE2HOST16(x) SWAP16(x)
+
+#endif
+
+void endian_swap_halfs(uint16_t *halfs, size_t count) {
+  for (size_t idx = 0; idx < count; idx++) {
+    halfs[idx] = LE2HOST16(halfs[idx]);
+  }
+}
+
+void endian_swap_words(uint16_t *words, size_t count) {
+  for (size_t idx = 0; idx < count; idx++) {
+    words[idx] = LE2HOST32(words[idx]);
+  }
+}
+
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #ifdef __GNUC__
 #define unlikely(x) __builtin_expect((x), 0)
@@ -418,10 +461,10 @@ static void start_vram_transfer(uint32_t pos_word, uint32_t size_word, int is_re
   if (gpu.dma.h)
     log_anomaly("start_vram_transfer while old unfinished\n");
 
-  gpu.dma.x = pos_word & 0x3ff;
-  gpu.dma.y = (pos_word >> 16) & 0x1ff;
-  gpu.dma.w = ((size_word - 1) & 0x3ff) + 1;
-  gpu.dma.h = (((size_word >> 16) - 1) & 0x1ff) + 1;
+  gpu.dma.x = LE2HOST32(pos_word) & 0x3ff;
+  gpu.dma.y = (LE2HOST32(pos_word) >> 16) & 0x1ff;
+  gpu.dma.w = ((LE2HOST32(size_word) - 1) & 0x3ff) + 1;
+  gpu.dma.h = (((LE2HOST32(size_word) >> 16) - 1) & 0x1ff) + 1;
   gpu.dma.offset = 0;
   gpu.dma.is_read = is_read;
   gpu.dma_start = gpu.dma;
@@ -456,12 +499,12 @@ static noinline int do_cmd_list_skip(uint32_t *data, int count, int *last_cmd)
 
   while (pos < count && skip) {
     uint32_t *list = data + pos;
-    cmd = list[0] >> 24;
+    cmd = LE2HOST32(list[0]) >> 24;
     len = 1 + cmd_lengths[cmd];
 
     switch (cmd) {
       case 0x02:
-        if ((int)(list[2] & 0x3ff) > gpu.screen.w || (int)((list[2] >> 16) & 0x1ff) > gpu.screen.h)
+        if ((int)(LE2HOST32(list[2]) & 0x3ff) > gpu.screen.w || (int)((LE2HOST32(list[2]) >> 16) & 0x1ff) > gpu.screen.h)
           // clearing something large, don't skip
           do_cmd_list(list, 3, &dummy);
         else
@@ -472,12 +515,12 @@ static noinline int do_cmd_list_skip(uint32_t *data, int count, int *last_cmd)
       case 0x34 ... 0x37:
       case 0x3c ... 0x3f:
         gpu.ex_regs[1] &= ~0x1ff;
-        gpu.ex_regs[1] |= list[4 + ((cmd >> 4) & 1)] & 0x1ff;
+        gpu.ex_regs[1] |= LE2HOST32(list[4 + ((cmd >> 4) & 1)]) & 0x1ff;
         break;
       case 0x48 ... 0x4F:
         for (v = 3; pos + v < count; v++)
         {
-          if ((list[v] & 0xf000f000) == 0x50005000)
+          if ((LE2HOST32(list[v]) & 0xf000f000) == 0x50005000)
             break;
         }
         len += v - 3;
@@ -485,16 +528,16 @@ static noinline int do_cmd_list_skip(uint32_t *data, int count, int *last_cmd)
       case 0x58 ... 0x5F:
         for (v = 4; pos + v < count; v += 2)
         {
-          if ((list[v] & 0xf000f000) == 0x50005000)
+          if ((LE2HOST32(list[v]) & 0xf000f000) == 0x50005000)
             break;
         }
         len += v - 4;
         break;
       default:
         if (cmd == 0xe3)
-          skip = decide_frameskip_allow(list[0]);
+          skip = decide_frameskip_allow(LE2HOST32(list[0]));
         if ((cmd & 0xf8) == 0xe0)
-          gpu.ex_regs[cmd & 7] = list[0];
+          gpu.ex_regs[cmd & 7] = LE2HOST32(list[0]);
         break;
     }
 
@@ -529,7 +572,7 @@ static noinline int do_cmd_buffer(uint32_t *data, int count)
         break;
     }
 
-    cmd = data[pos] >> 24;
+    cmd = LE2HOST32(data[pos]) >> 24;
     if (0xa0 <= cmd && cmd <= 0xdf) {
       if (unlikely((pos+2) >= count)) {
         // incomplete vram write/read cmd, can't consume yet
@@ -593,7 +636,7 @@ void GPUwriteDataMem(uint32_t *mem, int count)
 void GPUwriteData(uint32_t data)
 {
   log_io("gpu_write %08x\n", data);
-  gpu.cmd_buffer[gpu.cmd_len++] = data;
+  gpu.cmd_buffer[gpu.cmd_len++] = HOST2LE32(data);
   if (gpu.cmd_len >= CMD_BUFFER_LEN)
     flush_cmd_buffer();
 }
@@ -614,8 +657,8 @@ long GPUdmaChain(uint32_t *rambase, uint32_t start_addr)
   for (count = 0; (addr & 0x800000) == 0; count++)
   {
     list = rambase + (addr & 0x1fffff) / 4;
-    len = list[0] >> 24;
-    addr = list[0] & 0xffffff;
+    len = LE2HOST32(list[0]) >> 24;
+    addr = LE2HOST32(list[0]) & 0xffffff;
     preload(rambase + (addr & 0x1fffff) / 4);
 
     cpu_cycles += 10;
@@ -640,7 +683,7 @@ long GPUdmaChain(uint32_t *rambase, uint32_t start_addr)
       // loop detection marker
       // (bit23 set causes DMA error on real machine, so
       //  unlikely to be ever set by the game)
-      list[0] |= 0x800000;
+      list[0] = HOST2LE32(LE2HOST32(list[0]) | 0x800000);
     }
   }
 
@@ -650,8 +693,8 @@ long GPUdmaChain(uint32_t *rambase, uint32_t start_addr)
     addr = ld_addr & 0x1fffff;
     while (count-- > 0) {
       list = rambase + addr / 4;
-      addr = list[0] & 0x1fffff;
-      list[0] &= ~0x800000;
+      addr = LE2HOST32(list[0]) & 0x1fffff;
+      list[0] = HOST2LE32(LE2HOST32(list[0]) & ~0x800000);
     }
   }
 
@@ -682,8 +725,10 @@ uint32_t GPUreadData(void)
     flush_cmd_buffer();
 
   ret = gpu.gp0;
-  if (gpu.dma.h)
+  if (gpu.dma.h) {
     do_vram_io(&ret, 1, 1);
+    ret = LE2HOST32(ret);
+  }
 
   log_io("gpu_read %08x\n", ret);
   return ret;
