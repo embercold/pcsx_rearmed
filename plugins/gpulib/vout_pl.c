@@ -53,9 +53,9 @@ static void check_mode_change(int force)
   }
 
   // width|rgb24 change?
-  if (force || (gpu.status.reg ^ old_status) & ((7<<16)|(1<<21)) || h != old_h)
+  if (force || (gpu_get_status_reg() ^ old_status) & ((7<<16)|(1<<21)) || h != old_h)
   {
-    old_status = gpu.status.reg;
+    old_status = gpu_get_status_reg();
     old_h = h;
 
     cbs->pl_vout_set_mode(w_out, h_out, w, h, gpu.status.rgb24 ? 24 : 16);

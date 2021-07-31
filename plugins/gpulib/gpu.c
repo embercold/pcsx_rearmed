@@ -45,18 +45,6 @@
 
 #endif
 
-void endian_swap_halfs(uint16_t *halfs, size_t count) {
-  for (size_t idx = 0; idx < count; idx++) {
-    halfs[idx] = LE2HOST16(halfs[idx]);
-  }
-}
-
-void endian_swap_words(uint16_t *words, size_t count) {
-  for (size_t idx = 0; idx < count; idx++) {
-    words[idx] = LE2HOST32(words[idx]);
-  }
-}
-
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #ifdef __GNUC__
 #define unlikely(x) __builtin_expect((x), 0)
@@ -81,6 +69,59 @@ struct psx_gpu gpu;
 static noinline int do_cmd_buffer(uint32_t *data, int count);
 static void finish_vram_transfer(int is_read);
 
+uint32_t gpu_get_status_reg() {
+  uint32_t get_sr = 
+    (gpu.status.tx << 0) |
+    (gpu.status.ty << 4) |
+    (gpu.status.abr << 5) |
+    (gpu.status.tp << 7) |
+    (gpu.status.dtd << 9) |
+    (gpu.status.dfe << 10) |
+    (gpu.status.md << 11) |
+    (gpu.status.me << 12) |
+    (gpu.status.unkn << 13) |
+    (gpu.status.width1 << 16) |
+    (gpu.status.width0 << 17) |
+    (gpu.status.dheight << 19) |
+    (gpu.status.video << 20) |
+    (gpu.status.rgb24 << 21) |
+    (gpu.status.interlace << 22) |
+    (gpu.status.blanking << 23) |
+    (gpu.status.unkn2 << 24) |
+    (gpu.status.busy << 26) |
+    (gpu.status.img << 27) |
+    (gpu.status.com << 28) |
+    (gpu.status.dma << 29) |
+    (gpu.status.lcf << 31);
+  return get_sr;
+}
+
+void gpu_set_status_reg(uint32_t sr) {
+    gpu.status.tx = (sr >> 0) & 0b1111;
+    gpu.status.ty = (sr >> 4) & 0b1;
+    gpu.status.abr = (sr >> 5) & 0b11;
+    gpu.status.tp = (sr >> 7) & 0b11;
+    gpu.status.dtd = (sr >> 9) & 0b1;
+    gpu.status.dfe = (sr >> 10) & 0b1;
+    gpu.status.md = (sr >> 11) & 0b1;
+    gpu.status.me = (sr >> 12) & 0b1;
+    gpu.status.unkn = (sr >> 13) & 0b111;
+    gpu.status.width1 = (sr >> 16) & 0b1;
+    gpu.status.width0 = (sr >> 17) & 0b11;
+    gpu.status.dheight = (sr >> 19) & 0b1;
+    gpu.status.video = (sr >> 20) & 0b1;
+    gpu.status.rgb24 = (sr >> 21) & 0b1;
+    gpu.status.interlace = (sr >> 22) & 0b1;
+    gpu.status.blanking = (sr >> 23) & 0b1;
+    gpu.status.unkn2 = (sr >> 24) & 0b11;
+    gpu.status.busy = (sr >> 26) & 0b1;
+    gpu.status.img = (sr >> 27) & 0b1;
+    gpu.status.com = (sr >> 28) & 0b1;
+    gpu.status.dma = (sr >> 29) & 0b11;
+    gpu.status.lcf = (sr >> 31) & 0b1;
+    uint32_t rec_sr = gpu_get_status_reg();
+}
+
 static noinline void do_cmd_reset(void)
 {
   renderer_sync();
@@ -102,7 +143,7 @@ static noinline void do_reset(void)
   memset(gpu.regs, 0, sizeof(gpu.regs));
   for (i = 0; i < sizeof(gpu.ex_regs) / sizeof(gpu.ex_regs[0]); i++)
     gpu.ex_regs[i] = (0xe0 + i) << 24;
-  gpu.status.reg = 0x14802000;
+  gpu_set_status_reg(0x14802000);
   gpu.gp0 = 0;
   gpu.regs[3] = 1;
   gpu.screen.hres = gpu.screen.w = 256;
@@ -355,9 +396,9 @@ void GPUwriteStatus(uint32_t data)
       update_height();
       break;
     case 0x08:
-      gpu.status.reg = (gpu.status.reg & ~0x7f0000) | ((data & 0x3F) << 17) | ((data & 0x40) << 10);
-      gpu.screen.hres = hres[(gpu.status.reg >> 16) & 7];
-      gpu.screen.vres = vres[(gpu.status.reg >> 19) & 3];
+      gpu_set_status_reg((gpu_get_status_reg() & ~0x7f0000) | ((data & 0x3F) << 17) | ((data & 0x40) << 10));
+      gpu.screen.hres = hres[(gpu_get_status_reg() >> 16) & 7];
+      gpu.screen.vres = vres[(gpu_get_status_reg() >> 19) & 3];
       update_width();
       update_height();
       renderer_notify_res_change();
@@ -461,10 +502,10 @@ static void start_vram_transfer(uint32_t pos_word, uint32_t size_word, int is_re
   if (gpu.dma.h)
     log_anomaly("start_vram_transfer while old unfinished\n");
 
-  gpu.dma.x = LE2HOST32(pos_word) & 0x3ff;
-  gpu.dma.y = (LE2HOST32(pos_word) >> 16) & 0x1ff;
-  gpu.dma.w = ((LE2HOST32(size_word) - 1) & 0x3ff) + 1;
-  gpu.dma.h = (((LE2HOST32(size_word) >> 16) - 1) & 0x1ff) + 1;
+  gpu.dma.x = pos_word & 0x3ff;
+  gpu.dma.y = (pos_word >> 16) & 0x1ff;
+  gpu.dma.w = ((size_word - 1) & 0x3ff) + 1;
+  gpu.dma.h = (((size_word >> 16) - 1) & 0x1ff) + 1;
   gpu.dma.offset = 0;
   gpu.dma.is_read = is_read;
   gpu.dma_start = gpu.dma;
@@ -504,7 +545,8 @@ static noinline int do_cmd_list_skip(uint32_t *data, int count, int *last_cmd)
 
     switch (cmd) {
       case 0x02:
-        if ((int)(LE2HOST32(list[2]) & 0x3ff) > gpu.screen.w || (int)((LE2HOST32(list[2]) >> 16) & 0x1ff) > gpu.screen.h)
+        if ((int)(LE2HOST32(list[2]) & 0x3ff) > gpu.screen.w ||
+          (int)((LE2HOST32(list[2]) >> 16) & 0x1ff) > gpu.screen.h)
           // clearing something large, don't skip
           do_cmd_list(list, 3, &dummy);
         else
@@ -581,13 +623,13 @@ static noinline int do_cmd_buffer(uint32_t *data, int count)
       }
 
       // consume vram write/read cmd
-      start_vram_transfer(data[pos + 1], data[pos + 2], (cmd & 0xe0) == 0xc0);
+      start_vram_transfer(LE2HOST32(data[pos + 1]), LE2HOST32(data[pos + 2]), (cmd & 0xe0) == 0xc0);
       pos += 3;
       continue;
     }
 
     // 0xex cmds might affect frameskip.allow, so pass to do_cmd_list_skip
-    if (gpu.frameskip.active && (gpu.frameskip.allow || ((data[pos] >> 24) & 0xf0) == 0xe0))
+    if (gpu.frameskip.active && (gpu.frameskip.allow || ((LE2HOST32(data[pos]) >> 24) & 0xf0) == 0xe0))
       pos += do_cmd_list_skip(data + pos, count - pos, &cmd);
     else {
       pos += do_cmd_list(data + pos, count - pos, &cmd);
@@ -599,9 +641,11 @@ static noinline int do_cmd_buffer(uint32_t *data, int count)
       break;
   }
 
-  gpu.status.reg &= ~0x1fff;
-  gpu.status.reg |= gpu.ex_regs[1] & 0x7ff;
-  gpu.status.reg |= (gpu.ex_regs[6] & 3) << 11;
+  uint32_t sr = gpu_get_status_reg();
+  sr &= ~0x1fff;
+  sr |= gpu.ex_regs[1] & 0x7ff;
+  sr |= (gpu.ex_regs[6] & 3) << 11;
+  gpu_set_status_reg(sr);
 
   gpu.state.fb_dirty |= vram_dirty;
 
@@ -657,8 +701,19 @@ long GPUdmaChain(uint32_t *rambase, uint32_t start_addr)
   for (count = 0; (addr & 0x800000) == 0; count++)
   {
     list = rambase + (addr & 0x1fffff) / 4;
-    len = LE2HOST32(list[0]) >> 24;
-    addr = LE2HOST32(list[0]) & 0xffffff;
+    uint32_t link = LE2HOST32(list[0]);
+    
+    len = link >> 24;
+    addr = link & 0xffffff;
+
+    // HACK: The end-of-chain marker is in the wrong endianness somehow
+    if (len == 0xFF) {
+      // TPRINT("Wrong marker - link=0x%08X len=0x%02X addr=0x%06X\n", link, len, addr);
+      link = 0x00FFFFFF;
+      len = link >> 24;
+      addr = link & 0xffffff;
+    }
+
     preload(rambase + (addr & 0x1fffff) / 4);
 
     cpu_cycles += 10;
@@ -673,30 +728,30 @@ long GPUdmaChain(uint32_t *rambase, uint32_t start_addr)
         log_anomaly("GPUdmaChain: discarded %d/%d words\n", left, len);
     }
 
-    #define LD_THRESHOLD (8*1024)
-    if (count >= LD_THRESHOLD) {
-      if (count == LD_THRESHOLD) {
-        ld_addr = addr;
-        continue;
-      }
+    // #define LD_THRESHOLD (8*1024)
+    // if (count >= LD_THRESHOLD) {
+    //   if (count == LD_THRESHOLD) {
+    //     ld_addr = addr;
+    //     continue;
+    //   }
 
-      // loop detection marker
-      // (bit23 set causes DMA error on real machine, so
-      //  unlikely to be ever set by the game)
-      list[0] = HOST2LE32(LE2HOST32(list[0]) | 0x800000);
-    }
+    //   // loop detection marker
+    //   // (bit23 set causes DMA error on real machine, so
+    //   //  unlikely to be ever set by the game)
+    //   list[0] = HOST2LE32(LE2HOST32(list[0]) | 0x800000);
+    // }
   }
 
-  if (ld_addr != 0) {
-    // remove loop detection markers
-    count -= LD_THRESHOLD + 2;
-    addr = ld_addr & 0x1fffff;
-    while (count-- > 0) {
-      list = rambase + addr / 4;
-      addr = LE2HOST32(list[0]) & 0x1fffff;
-      list[0] = HOST2LE32(LE2HOST32(list[0]) & ~0x800000);
-    }
-  }
+  // if (ld_addr != 0) {
+  //   // remove loop detection markers
+  //   count -= LD_THRESHOLD + 2;
+  //   addr = ld_addr & 0x1fffff;
+  //   while (count-- > 0) {
+  //     list = rambase + addr / 4;
+  //     addr = LE2HOST32(list[0]) & 0x1fffff;
+  //     list[0] = HOST2LE32(LE2HOST32(list[0]) & ~0x800000);
+  //   }
+  // }
 
   gpu.state.last_list.frame = *gpu.state.frame_count;
   gpu.state.last_list.hcnt = *gpu.state.hcnt;
@@ -741,7 +796,7 @@ uint32_t GPUreadStatus(void)
   if (unlikely(gpu.cmd_len > 0))
     flush_cmd_buffer();
 
-  ret = gpu.status.reg;
+  ret = gpu_get_status_reg();
   log_io("gpu_read_status %08x\n", ret);
   return ret;
 }
@@ -767,14 +822,14 @@ long GPUfreeze(uint32_t type, struct GPUFreeze *freeze)
       memcpy(freeze->psxVRam, gpu.vram, 1024 * 512 * 2);
       memcpy(freeze->ulControl, gpu.regs, sizeof(gpu.regs));
       memcpy(freeze->ulControl + 0xe0, gpu.ex_regs, sizeof(gpu.ex_regs));
-      freeze->ulStatus = gpu.status.reg;
+      freeze->ulStatus = gpu_get_status_reg();
       break;
     case 0: // load
       renderer_sync();
       memcpy(gpu.vram, freeze->psxVRam, 1024 * 512 * 2);
       memcpy(gpu.regs, freeze->ulControl, sizeof(gpu.regs));
       memcpy(gpu.ex_regs, freeze->ulControl + 0xe0, sizeof(gpu.ex_regs));
-      gpu.status.reg = freeze->ulStatus;
+      gpu_set_status_reg(freeze->ulStatus);
       gpu.cmd_len = 0;
       for (i = 8; i > 0; i--) {
         gpu.regs[i] ^= 1; // avoid reg change detection

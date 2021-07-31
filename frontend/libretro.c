@@ -246,10 +246,21 @@ static void convert(void *buf, size_t bytes)
 }
 #endif
 
-static void vout_flip(const void *vram, int stride, int bgr24, int w, int h)
+static void endian_swap_half(uint16_t *buf, ssize_t cnt)
+{
+#ifdef PCSX_BIG_ENDIAN
+   for (ssize_t idx = 0; idx < cnt; idx++) {
+      buf[idx] = 
+         ((buf[idx] && 0xFF00) >> 16) |
+         ((buf[idx] && 0x00FF) << 16) ;
+   }
+#endif
+}
+
+static void vout_flip(void *vram, int stride, int bgr24, int w, int h)
 {
    unsigned short *dest = vout_buf_ptr;
-   const unsigned short *src = vram;
+   unsigned short *src = vram;
    int dstride = vout_width, h1 = h;
    int doffs;
 
@@ -282,7 +293,10 @@ static void vout_flip(const void *vram, int stride, int bgr24, int w, int h)
    {
       for (; h1-- > 0; dest += dstride, src += stride)
       {
+         // Make esure the RGB555 data is read with the correct byte order
+         endian_swap_half(src, w);
          bgr555_to_rgb565(dest, src, w * 2);
+         endian_swap_half(src, w);
       }
    }
 
@@ -2502,6 +2516,32 @@ static void print_internal_fps(void)
       frame_count = 0;
 }
 
+int myframe_count = 0;
+
+static void print_msg(char *str) {
+   if (msg_interface_version >= 1)
+   {
+      struct retro_message_ext msg = {
+         str,
+         3000,
+         1,
+         RETRO_LOG_INFO,
+         RETRO_MESSAGE_TARGET_OSD,
+         RETRO_MESSAGE_TYPE_STATUS,
+         -1
+      };
+      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE_EXT, &msg);
+   }
+   else
+   {
+      struct retro_message msg = {
+         str,
+         180
+      };
+      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+   }
+}
+
 void retro_run(void)
 {
    //SysReset must be run while core is running,Not in menu (Locks up Retroarch)
@@ -2530,8 +2570,13 @@ void retro_run(void)
    stop = 0;
    psxCpu->Execute();
 
-   video_cb((vout_fb_dirty || !vout_can_dupe || !duping_enable) ? vout_buf_ptr : NULL,
-       vout_width, vout_height, vout_width * 2);
+   static char msg[1024] = {0};
+   snprintf(msg, sizeof(msg), "pc=%08X frame=%i rec=%i %s", (unsigned) psxRegs.pc, myframe_count++, psxCpu != &psxInt, !found_bios ? "(no bios!)" : "");
+   print_msg(msg);
+
+   video_cb(vout_buf_ptr, vout_width, vout_height, vout_width * 2);
+   // video_cb((vout_fb_dirty || !vout_can_dupe || !duping_enable) ? vout_buf_ptr : NULL,
+   //     vout_width, vout_height, vout_width * 2);
    vout_fb_dirty = 0;
 
    set_vout_fb();

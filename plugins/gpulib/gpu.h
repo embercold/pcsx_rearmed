@@ -23,32 +23,29 @@ struct psx_gpu {
   uint32_t cmd_buffer[CMD_BUFFER_LEN];
   uint32_t regs[16];
   uint16_t *vram;
-  union {
-    uint32_t reg;
-    struct {
-      uint32_t tx:4;        //  0 texture page
-      uint32_t ty:1;
-      uint32_t abr:2;
-      uint32_t tp:2;        //  7 t.p. mode (4,8,15bpp)
-      uint32_t dtd:1;       //  9 dither
-      uint32_t dfe:1;
-      uint32_t md:1;        // 11 set mask bit when drawing
-      uint32_t me:1;        // 12 no draw on mask
-      uint32_t unkn:3;
-      uint32_t width1:1;    // 16
-      uint32_t width0:2;
-      uint32_t dheight:1;   // 19 double height
-      uint32_t video:1;     // 20 NTSC,PAL
-      uint32_t rgb24:1;
-      uint32_t interlace:1; // 22 interlace on
-      uint32_t blanking:1;  // 23 display not enabled
-      uint32_t unkn2:2;
-      uint32_t busy:1;      // 26 !busy drawing
-      uint32_t img:1;       // 27 ready to DMA image data
-      uint32_t com:1;       // 28 ready for commands
-      uint32_t dma:2;       // 29 off, ?, to vram, from vram
-      uint32_t lcf:1;       // 31
-    };
+  struct {
+    uint32_t tx:4;        //  0 texture page
+    uint32_t ty:1;
+    uint32_t abr:2;
+    uint32_t tp:2;        //  7 t.p. mode (4,8,15bpp)
+    uint32_t dtd:1;       //  9 dither
+    uint32_t dfe:1;
+    uint32_t md:1;        // 11 set mask bit when drawing
+    uint32_t me:1;        // 12 no draw on mask
+    uint32_t unkn:3;
+    uint32_t width1:1;    // 16
+    uint32_t width0:2;
+    uint32_t dheight:1;   // 19 double height
+    uint32_t video:1;     // 20 NTSC,PAL
+    uint32_t rgb24:1;
+    uint32_t interlace:1; // 22 interlace on
+    uint32_t blanking:1;  // 23 display not enabled
+    uint32_t unkn2:2;
+    uint32_t busy:1;      // 26 !busy drawing
+    uint32_t img:1;       // 27 ready to DMA image data
+    uint32_t com:1;       // 28 ready for commands
+    uint32_t dma:2;       // 29 off, ?, to vram, from vram
+    uint32_t lcf:1;       // 31
   } status;
   uint32_t gp0;
   uint32_t ex_regs[8];
@@ -146,6 +143,9 @@ long GPUopen(void **dpy);
 long GPUclose(void);
 void GPUvBlank(int is_vblank, int lcf);
 void GPUrearmedCallbacks(const struct rearmed_cbs *cbs_);
+
+uint32_t gpu_get_status_reg();
+void gpu_set_status_reg(uint32_t sr);
 
 #ifdef __cplusplus
 }

@@ -338,7 +338,7 @@ int do_cmd_list(uint32_t *list, int list_len, int *last_cmd)
     if (cmd == 0xa0 || cmd == 0xc0)
       break; // image i/o, forward to upper layer
     else if ((cmd & 0xf8) == 0xe0)
-      gpu.ex_regs[cmd & 7] = list[0];
+      gpu.ex_regs[cmd & 7] = LE2HOST32(*list);
 #endif
 
     primTableJ[cmd]((void *)list);
@@ -416,12 +416,17 @@ breakloop:
 
 void renderer_sync_ecmds(uint32_t *ecmds)
 {
-  cmdTexturePage((unsigned char *)&ecmds[1]);
-  cmdTextureWindow((unsigned char *)&ecmds[2]);
-  cmdDrawAreaStart((unsigned char *)&ecmds[3]);
-  cmdDrawAreaEnd((unsigned char *)&ecmds[4]);
-  cmdDrawOffset((unsigned char *)&ecmds[5]);
-  cmdSTP((unsigned char *)&ecmds[6]);
+  uint32_t ecmds_le[7];
+  // Registers are stored in Native Endian, commands expect Little Endian
+  for (int idx = 0; idx < 7; idx++) {
+    ecmds_le[idx] = HOST2LE32(ecmds[idx]);
+  }
+  cmdTexturePage((unsigned char *)&ecmds_le[1]);
+  cmdTextureWindow((unsigned char *)&ecmds_le[2]);
+  cmdDrawAreaStart((unsigned char *)&ecmds_le[3]);
+  cmdDrawAreaEnd((unsigned char *)&ecmds_le[4]);
+  cmdDrawOffset((unsigned char *)&ecmds_le[5]);
+  cmdSTP((unsigned char *)&ecmds_le[6]);
 }
 
 void renderer_update_caches(int x, int y, int w, int h)
