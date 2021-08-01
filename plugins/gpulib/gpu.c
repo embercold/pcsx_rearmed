@@ -706,13 +706,13 @@ long GPUdmaChain(uint32_t *rambase, uint32_t start_addr)
     len = link >> 24;
     addr = link & 0xffffff;
 
-    // HACK: The end-of-chain marker is in the wrong endianness somehow
-    if (len == 0xFF) {
-      // TPRINT("Wrong marker - link=0x%08X len=0x%02X addr=0x%06X\n", link, len, addr);
-      link = 0x00FFFFFF;
-      len = link >> 24;
-      addr = link & 0xffffff;
-    }
+    // // HACK: The end-of-chain marker is in wrong endianness somehow
+    // if (len == 0xFF) {
+    //   // TPRINT("Wrong marker - link=0x%08X len=0x%02X addr=0x%06X\n", link, len, addr);
+    //   link = 0x00FFFFFF;
+    //   len = link >> 24;
+    //   addr = link & 0xffffff;
+    // }
 
     preload(rambase + (addr & 0x1fffff) / 4);
 
@@ -728,30 +728,30 @@ long GPUdmaChain(uint32_t *rambase, uint32_t start_addr)
         log_anomaly("GPUdmaChain: discarded %d/%d words\n", left, len);
     }
 
-    // #define LD_THRESHOLD (8*1024)
-    // if (count >= LD_THRESHOLD) {
-    //   if (count == LD_THRESHOLD) {
-    //     ld_addr = addr;
-    //     continue;
-    //   }
+    #define LD_THRESHOLD (8*1024)
+    if (count >= LD_THRESHOLD) {
+      if (count == LD_THRESHOLD) {
+        ld_addr = addr;
+        continue;
+      }
 
-    //   // loop detection marker
-    //   // (bit23 set causes DMA error on real machine, so
-    //   //  unlikely to be ever set by the game)
-    //   list[0] = HOST2LE32(LE2HOST32(list[0]) | 0x800000);
-    // }
+      // loop detection marker
+      // (bit23 set causes DMA error on real machine, so
+      //  unlikely to be ever set by the game)
+      list[0] = HOST2LE32(LE2HOST32(list[0]) | 0x800000);
+    }
   }
 
-  // if (ld_addr != 0) {
-  //   // remove loop detection markers
-  //   count -= LD_THRESHOLD + 2;
-  //   addr = ld_addr & 0x1fffff;
-  //   while (count-- > 0) {
-  //     list = rambase + addr / 4;
-  //     addr = LE2HOST32(list[0]) & 0x1fffff;
-  //     list[0] = HOST2LE32(LE2HOST32(list[0]) & ~0x800000);
-  //   }
-  // }
+  if (ld_addr != 0) {
+    // remove loop detection markers
+    count -= LD_THRESHOLD + 2;
+    addr = ld_addr & 0x1fffff;
+    while (count-- > 0) {
+      list = rambase + addr / 4;
+      addr = LE2HOST32(list[0]) & 0x1fffff;
+      list[0] = HOST2LE32(LE2HOST32(list[0]) & ~0x800000);
+    }
+  }
 
   gpu.state.last_list.frame = *gpu.state.frame_count;
   gpu.state.last_list.hcnt = *gpu.state.hcnt;
@@ -809,6 +809,7 @@ struct GPUFreeze
   unsigned char psxVRam[1024*1024*2]; // current VRam image (full 2 MB for ZN)
 };
 
+/// TODO: Maintain compatibility between LE/BE platfroms
 long GPUfreeze(uint32_t type, struct GPUFreeze *freeze)
 {
   int i;

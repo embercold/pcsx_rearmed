@@ -151,4 +151,27 @@ void gpu_set_status_reg(uint32_t sr);
 }
 #endif
 
+#include "stdio.h"
+
+#ifdef PCSX_BIG_ENDIAN
+#define XPL "wii"
+#else
+#define XPL "pc"
+#endif
+
+extern int myfc;
+
+#define XCLEAR() \
+  fclose(fopen("xtrace-" XPL ".txt", "w"));
+#define XPRINT(FMT, ...) \
+  { \
+    if ((myfc > 500) && (myfc < 550)) { \
+      FILE *trace = fopen("xtrace-" XPL ".txt", "a+"); \
+      fprintf(trace, FMT, ##__VA_ARGS__); \
+      fclose(trace); \
+    } \
+  }
+#define XTRACE(FMT, ...) \
+  XPRINT("(%s:%i) " FMT "\n", __func__, __LINE__, ##__VA_ARGS__)
+
 #endif /* __GPULIB_GPU_H__ */

@@ -274,7 +274,7 @@ extern BOOL           bDebugText;
 extern PSXDisplay_t   PSXDisplay;
 extern PSXDisplay_t   PreviousPSXDisplay;
 extern BOOL           bSkipNextFrame;
-extern long           lGPUstatusRet;
+extern uint32_t       lGPUstatusRet;
 extern unsigned char  * psxVSecure;
 extern unsigned char  * psxVub;
 extern signed char    * psxVsb;

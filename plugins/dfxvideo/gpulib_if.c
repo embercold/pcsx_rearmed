@@ -174,15 +174,15 @@ typedef struct PSXDISPLAYTAG
  PSXPoint_t  DisplayPosition;
  PSXPoint_t  DisplayEnd;
 
- int32_t        Double;
- int32_t        Height;
- int32_t        PAL;
- int32_t        InterlacedNew;
- int32_t        Interlaced;
- int32_t        RGB24New;
- int32_t        RGB24;
+ int32_t     Double;
+ int32_t     Height;
+ int32_t     PAL;
+ int32_t     InterlacedNew;
+ int32_t     Interlaced;
+ int32_t     RGB24New;
+ int32_t     RGB24;
  PSXSPoint_t DrawOffset;
- int32_t        Disabled;
+ int32_t     Disabled;
  PSXRect_t   Range;
 
 } PSXDisplay_t;
@@ -191,8 +191,8 @@ typedef struct PSXDISPLAYTAG
 
 // draw.c
 
-extern int32_t           GlobalTextAddrX,GlobalTextAddrY,GlobalTextTP;
-extern int32_t           GlobalTextABR,GlobalTextPAGE;
+extern int32_t        GlobalTextAddrX,GlobalTextAddrY,GlobalTextTP;
+extern int32_t        GlobalTextABR,GlobalTextPAGE;
 extern short          ly0,lx0,ly1,lx1,ly2,lx2,ly3,lx3;
 extern long           lLowerpart;
 extern BOOL           bCheckMask;
@@ -209,17 +209,17 @@ extern BOOL           bUsingTWin;
 extern TWin_t         TWin;
 extern void (*primTableJ[256])(unsigned char *);
 extern void (*primTableSkip[256])(unsigned char *);
-extern unsigned short  usMirror;
+extern unsigned short usMirror;
 extern int            iDither;
-extern uint32_t  dwCfgFixes;
-extern uint32_t  dwActFixes;
+extern uint32_t       dwCfgFixes;
+extern uint32_t       dwActFixes;
 extern int            iUseFixes;
 extern int            iUseDither;
 extern BOOL           bDoVSyncUpdate;
-extern int32_t           drawX;
-extern int32_t           drawY;
-extern int32_t           drawW;
-extern int32_t           drawH;
+extern int32_t        drawX;
+extern int32_t        drawY;
+extern int32_t        drawW;
+extern int32_t        drawH;
 
 // gpu.h
 
@@ -256,7 +256,7 @@ signed   short *psxVsw;
 uint32_t *psxVul;
 int32_t  *psxVsl;
 
-long              lGPUstatusRet;
+uint32_t          lGPUstatusRet;
 uint32_t          lGPUInfoVals[16];
 
 VRAMLoad_t        VRAMWrite;
@@ -291,7 +291,7 @@ static void set_vram(void *vram)
 int renderer_init(void)
 {
  set_vram(gpu.vram);
-
+ 
  PSXDisplay.RGB24        = FALSE;                      // init some stuff
  PSXDisplay.Interlaced   = FALSE;
  PSXDisplay.DrawOffset.x = 0;
@@ -417,7 +417,8 @@ breakloop:
 void renderer_sync_ecmds(uint32_t *ecmds)
 {
   uint32_t ecmds_le[7];
-  // Registers are stored in Native Endian, commands expect Little Endian
+  // The registers are stored in Native Endian, and the command handlers expect
+  // Little Endian. Make a temporary copy of them, byteswapping it if needed.
   for (int idx = 0; idx < 7; idx++) {
     ecmds_le[idx] = HOST2LE32(ecmds[idx]);
   }

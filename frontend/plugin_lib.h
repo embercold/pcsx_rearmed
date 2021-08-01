@@ -1,8 +1,6 @@
 #ifndef __PLUGIN_LIB_H__
 #define __PLUGIN_LIB_H__
 
-#include <stdint.h>
-
 #define THREAD_RENDERING_OFF   0
 #define THREAD_RENDERING_SYNC  1
 #define THREAD_RENDERING_ASYNC 2
@@ -55,7 +53,7 @@ struct rearmed_cbs {
 	void  (*pl_get_layer_pos)(int *x, int *y, int *w, int *h);
 	int   (*pl_vout_open)(void);
 	void  (*pl_vout_set_mode)(int w, int h, int raw_w, int raw_h, int bpp);
-	void  (*pl_vout_flip)(void *vram, int stride, int bgr24,
+	void  (*pl_vout_flip)(const void *vram, int stride, int bgr24,
 			      int w, int h);
 	void  (*pl_vout_close)(void);
 	void *(*mmap)(unsigned int size);
@@ -72,8 +70,8 @@ struct rearmed_cbs {
 	// gpu options
 	int   frameskip;
 	int   fskip_advice;
-	uint32_t *gpu_frame_count;
-	uint32_t *gpu_hcnt;
+	unsigned int *gpu_frame_count;
+	unsigned int *gpu_hcnt;
 	unsigned int flip_cnt; // increment manually if not using pl_vout_flip
 	unsigned int only_16bpp; // platform is 16bpp-only
 	unsigned int thread_rendering;

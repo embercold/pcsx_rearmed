@@ -929,7 +929,7 @@ static void primPolyF4(unsigned char *baseAddr)
 {
  uint32_t *gpuData = ((uint32_t *) baseAddr);
  short *sgpuData = ((short *) baseAddr);
-
+ 
  lx0 = GETLEs16(&sgpuData[2]);
  ly0 = GETLEs16(&sgpuData[3]);
  lx1 = GETLEs16(&sgpuData[4]);
@@ -948,7 +948,10 @@ static void primPolyF4(unsigned char *baseAddr)
  offsetPSX4();
  DrawSemiTrans = (SEMITRANSBIT(GETLE32(&gpuData[0]))) ? TRUE : FALSE;
 
- drawPoly4F(GETLE32(&gpuData[0]));
+//  drawPoly4F(GETLE32(&gpuData[0])); -- faulty in Big Endian
+ drawPoly4G(
+   GETLE32(&gpuData[0]), GETLE32(&gpuData[0]),
+   GETLE32(&gpuData[0]), GETLE32(&gpuData[0]));
 
  bDoVSyncUpdate=TRUE;
 }

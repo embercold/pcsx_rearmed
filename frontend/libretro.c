@@ -246,21 +246,12 @@ static void convert(void *buf, size_t bytes)
 }
 #endif
 
-static void endian_swap_half(uint16_t *buf, ssize_t cnt)
-{
-#ifdef PCSX_BIG_ENDIAN
-   for (ssize_t idx = 0; idx < cnt; idx++) {
-      buf[idx] = 
-         ((buf[idx] && 0xFF00) >> 16) |
-         ((buf[idx] && 0x00FF) << 16) ;
-   }
-#endif
-}
 
-static void vout_flip(void *vram, int stride, int bgr24, int w, int h)
+
+static void vout_flip(const void *vram, int stride, int bgr24, int w, int h)
 {
    unsigned short *dest = vout_buf_ptr;
-   unsigned short *src = vram;
+   const unsigned short *src = vram;
    int dstride = vout_width, h1 = h;
    int doffs;
 
@@ -293,17 +284,26 @@ static void vout_flip(void *vram, int stride, int bgr24, int w, int h)
    {
       for (; h1-- > 0; dest += dstride, src += stride)
       {
-         // Make esure the RGB555 data is read with the correct byte order
-         endian_swap_half(src, w);
+         // For the 16-bit video mode, the VRAM needs to be converted to
+         // the host byte order before further processing. This isn't needed
+         // for the 24-bit mode.
+#ifdef PCSX_BIG_ENDIAN
+         uint16_t tmp[1024];
+         for (ssize_t i = 0; i < ((w < 1024) ? w : 1024); i++) {
+            tmp[i] = ((src[i] & 0xFF00) >> 8) | ((src[i] & 0x00FF) << 8) ;
+         }
+         bgr555_to_rgb565(dest, tmp, w * 2);
+#else
          bgr555_to_rgb565(dest, src, w * 2);
-         endian_swap_half(src, w);
+#endif
       }
    }
 
-out:
 #ifndef FRONTEND_SUPPORTS_RGB565
    convert(vout_buf_ptr, vout_width * vout_height * 2);
 #endif
+
+out:
    vout_fb_dirty = 1;
    pl_rearmed_cbs.flip_cnt++;
 }
@@ -2516,31 +2516,6 @@ static void print_internal_fps(void)
       frame_count = 0;
 }
 
-int myframe_count = 0;
-
-static void print_msg(char *str) {
-   if (msg_interface_version >= 1)
-   {
-      struct retro_message_ext msg = {
-         str,
-         3000,
-         1,
-         RETRO_LOG_INFO,
-         RETRO_MESSAGE_TARGET_OSD,
-         RETRO_MESSAGE_TYPE_STATUS,
-         -1
-      };
-      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE_EXT, &msg);
-   }
-   else
-   {
-      struct retro_message msg = {
-         str,
-         180
-      };
-      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
-   }
-}
 
 void retro_run(void)
 {
@@ -2569,10 +2544,6 @@ void retro_run(void)
 
    stop = 0;
    psxCpu->Execute();
-
-   static char msg[1024] = {0};
-   snprintf(msg, sizeof(msg), "pc=%08X frame=%i rec=%i %s", (unsigned) psxRegs.pc, myframe_count++, psxCpu != &psxInt, !found_bios ? "(no bios!)" : "");
-   print_msg(msg);
 
    video_cb(vout_buf_ptr, vout_width, vout_height, vout_width * 2);
    // video_cb((vout_fb_dirty || !vout_can_dupe || !duping_enable) ? vout_buf_ptr : NULL,
