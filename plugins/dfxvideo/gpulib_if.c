@@ -53,8 +53,8 @@
 
 // byteswappings
 
-#define SWAP16(x) ({ uint16_t y=(x); (((y)>>8 & 0xff) | ((y)<<8 & 0xff00)); })
-#define SWAP32(x) ({ uint32_t y=(x); (((y)>>24 & 0xfful) | ((y)>>8 & 0xff00ul) | ((y)<<8 & 0xff0000ul) | ((y)<<24 & 0xff000000ul)); })
+#define SWAP16(X) ((((X) >> 8) & 0xFF) | (((X) & 0xFF) << 8))
+#define SWAP32(X) (SWAP16((X) >> 16) | (SWAP16(X) << 16))
 
 #ifdef PCSX_BIG_ENDIAN
 
@@ -334,12 +334,10 @@ int do_cmd_list(uint32_t *list, int list_len, int *last_cmd)
       break;
     }
 
-#ifndef TEST
     if (cmd == 0xa0 || cmd == 0xc0)
       break; // image i/o, forward to upper layer
     else if ((cmd & 0xf8) == 0xe0)
       gpu.ex_regs[cmd & 7] = LE2HOST32(*list);
-#endif
 
     primTableJ[cmd]((void *)list);
 
@@ -390,19 +388,6 @@ int do_cmd_list(uint32_t *list, int list_len, int *last_cmd)
         len += (num_vertexes - 2) * 2;
         break;
       }
-
-#ifdef TEST
-      case 0xA0:          //  sys -> vid
-      {
-        short *slist = (void *)list;
-        u32 load_width = LE2HOST16(slist[4]);
-        u32 load_height = LE2HOST16(slist[5]);
-        u32 load_size = load_width * load_height;
-
-        len += load_size / 2;
-        break;
-      }
-#endif
     }
   }
 
@@ -416,18 +401,25 @@ breakloop:
 
 void renderer_sync_ecmds(uint32_t *ecmds)
 {
-  uint32_t ecmds_le[7];
-  // The registers are stored in Native Endian, and the command handlers expect
-  // Little Endian. Make a temporary copy of them, byteswapping it if needed.
+  // Registers are in Native Endian, and the command handlers expect Little
+  // Endian. The solution, such as it is, is to do a temporary byteswap on
+  // the registers.
+#ifdef PCSX_BIG_ENDIAN
   for (int idx = 0; idx < 7; idx++) {
-    ecmds_le[idx] = HOST2LE32(ecmds[idx]);
+    ecmds[idx] = HOST2LE32(ecmds[idx]);
   }
-  cmdTexturePage((unsigned char *)&ecmds_le[1]);
-  cmdTextureWindow((unsigned char *)&ecmds_le[2]);
-  cmdDrawAreaStart((unsigned char *)&ecmds_le[3]);
-  cmdDrawAreaEnd((unsigned char *)&ecmds_le[4]);
-  cmdDrawOffset((unsigned char *)&ecmds_le[5]);
-  cmdSTP((unsigned char *)&ecmds_le[6]);
+#endif  
+  cmdTexturePage((unsigned char *)&ecmds[1]);
+  cmdTextureWindow((unsigned char *)&ecmds[2]);
+  cmdDrawAreaStart((unsigned char *)&ecmds[3]);
+  cmdDrawAreaEnd((unsigned char *)&ecmds[4]);
+  cmdDrawOffset((unsigned char *)&ecmds[5]);
+  cmdSTP((unsigned char *)&ecmds[6]);
+#ifdef PCSX_BIG_ENDIAN
+  for (int idx = 0; idx < 7; idx++) {
+    ecmds[idx] = LE2HOST32(ecmds[idx]);
+  }
+#endif
 }
 
 void renderer_update_caches(int x, int y, int w, int h)

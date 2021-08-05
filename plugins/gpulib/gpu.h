@@ -154,22 +154,18 @@ void gpu_set_status_reg(uint32_t sr);
 #include "stdio.h"
 
 #ifdef PCSX_BIG_ENDIAN
-#define XPL "wii"
+#define XFN "my-trace-wii.txt"
 #else
-#define XPL "pc"
+#define XFN "my-trace-pc.txt"
 #endif
 
-extern int myfc;
-
 #define XCLEAR() \
-  fclose(fopen("xtrace-" XPL ".txt", "w"));
+  fclose(fopen(XFN, "w"));
 #define XPRINT(FMT, ...) \
   { \
-    if ((myfc > 500) && (myfc < 550)) { \
-      FILE *trace = fopen("xtrace-" XPL ".txt", "a+"); \
-      fprintf(trace, FMT, ##__VA_ARGS__); \
-      fclose(trace); \
-    } \
+    FILE *trace = fopen(XFN, "a+"); \
+    fprintf(trace, FMT, ##__VA_ARGS__); \
+    fclose(trace); \
   }
 #define XTRACE(FMT, ...) \
   XPRINT("(%s:%i) " FMT "\n", __func__, __LINE__, ##__VA_ARGS__)
