@@ -151,23 +151,4 @@ void gpu_set_status_reg(uint32_t sr);
 }
 #endif
 
-#include "stdio.h"
-
-#ifdef PCSX_BIG_ENDIAN
-#define XFN "my-trace-wii.txt"
-#else
-#define XFN "my-trace-pc.txt"
-#endif
-
-#define XCLEAR() \
-  fclose(fopen(XFN, "w"));
-#define XPRINT(FMT, ...) \
-  { \
-    FILE *trace = fopen(XFN, "a+"); \
-    fprintf(trace, FMT, ##__VA_ARGS__); \
-    fclose(trace); \
-  }
-#define XTRACE(FMT, ...) \
-  XPRINT("(%s:%i) " FMT "\n", __func__, __LINE__, ##__VA_ARGS__)
-
 #endif /* __GPULIB_GPU_H__ */

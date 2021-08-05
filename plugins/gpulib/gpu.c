@@ -37,9 +37,9 @@
 #define gpu_log(fmt, ...) \
   printf("%d:%03d: " fmt, *gpu.state.frame_count, *gpu.state.hcnt, ##__VA_ARGS__)
 
-//#define log_io gpu_log
+// #define log_io gpu_log
 #define log_io(...)
-//#define log_anomaly gpu_log
+// #define log_anomaly gpu_log
 #define log_anomaly(...)
 
 struct psx_gpu gpu;
@@ -323,7 +323,7 @@ long GPUshutdown(void)
   return ret;
 }
 
-void GPUwriteStatus(uint32_t data /* Native Endian */)
+void GPUwriteStatus(uint32_t data)
 {
 	//senquack TODO: Would it be wise to add cmd buffer flush here, since
 	// status settings can affect commands already in buffer?
@@ -656,7 +656,7 @@ void GPUwriteDataMem(uint32_t *mem, int count)
     log_anomaly("GPUwriteDataMem: discarded %d/%d words\n", left, count);
 }
 
-void GPUwriteData(uint32_t data /* Native Endian */)
+void GPUwriteData(uint32_t data)
 {
   log_io("gpu_write %08x\n", data);
   gpu.cmd_buffer[gpu.cmd_len++] = BESWAP32(data);
@@ -679,9 +679,8 @@ long GPUdmaChain(uint32_t *rambase, uint32_t start_addr)
   addr = start_addr & 0xffffff;
   for (count = 0; (addr & 0x800000) == 0; count++)
   {
-    list = rambase + (addr & 0x1fffff) / 4;
+    list = &rambase[(addr & 0x1fffff) / 4];
     uint32_t link = BESWAP32(list[0]);
-    
     len = link >> 24;
     addr = link & 0xffffff;
 
@@ -757,7 +756,7 @@ uint32_t GPUreadData(void)
   }
 
   log_io("gpu_read %08x\n", ret);
-  return ret /* Native Endian */;
+  return ret;
 }
 
 uint32_t GPUreadStatus(void)
@@ -769,7 +768,7 @@ uint32_t GPUreadStatus(void)
 
   ret = gpu_get_status_reg();
   log_io("gpu_read_status %08x\n", ret);
-  return ret /* Native Endian */;
+  return ret;
 }
 
 struct GPUFreeze

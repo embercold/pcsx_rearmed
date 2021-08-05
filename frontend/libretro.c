@@ -284,9 +284,9 @@ static void vout_flip(const void *vram, int stride, int bgr24, int w, int h)
    {
       for (; h1-- > 0; dest += dstride, src += stride)
       {
-         // For the 16-bit video mode, the VRAM needs to be converted to
-         // the host byte order before further processing. This isn't needed
-         // for the 24-bit mode.
+         // For the 16-bit video mode, the VRAM needs to be converted to host
+         // byte order before further processing. This isn't needed for
+         // the 24-bit mode.
 #ifdef PCSX_BIG_ENDIAN
          uint16_t tmp[1024];
          for (ssize_t i = 0; i < ((w < 1024) ? w : 1024); i++) {
@@ -2545,9 +2545,8 @@ void retro_run(void)
    stop = 0;
    psxCpu->Execute();
 
-   video_cb(vout_buf_ptr, vout_width, vout_height, vout_width * 2);
-   // video_cb((vout_fb_dirty || !vout_can_dupe || !duping_enable) ? vout_buf_ptr : NULL,
-   //     vout_width, vout_height, vout_width * 2);
+   video_cb((vout_fb_dirty || !vout_can_dupe || !duping_enable) ? vout_buf_ptr : NULL,
+        vout_width, vout_height, vout_width * 2);
    vout_fb_dirty = 0;
 
    set_vout_fb();

@@ -491,7 +491,7 @@ struct retro_core_option_definition option_defs_us[] = {
       },
       "enabled",
    },
-#endif /* #ifdef PCSX_DYNAREC */
+#endif
 
 #ifdef NEW_DYNAREC
    {

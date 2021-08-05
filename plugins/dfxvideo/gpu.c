@@ -35,8 +35,8 @@ int32_t  *psxVsl;
 // GPU globals
 ////////////////////////////////////////////////////////////////////////
 
-static long       lGPUdataRet;
-long              lGPUstatusRet;
+static uint32_t   lGPUdataRet;
+uint32_t          lGPUstatusRet;
 uint32_t          ulStatusControl[256];
 
 static uint32_t gpuDataM[256];
@@ -71,6 +71,8 @@ static const int  *skip_advice;
 // FPS library
 #include "fps.c"
 
+// Newer interface
+long CALLBACK GPUvBlank(void) { }
 
 ////////////////////////////////////////////////////////////////////////
 // sets all kind of act fixes
