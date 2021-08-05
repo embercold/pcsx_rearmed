@@ -1,6 +1,8 @@
 #ifndef __PLUGIN_LIB_H__
 #define __PLUGIN_LIB_H__
 
+#include <stdint.h>
+
 #define THREAD_RENDERING_OFF   0
 #define THREAD_RENDERING_SYNC  1
 #define THREAD_RENDERING_ASYNC 2

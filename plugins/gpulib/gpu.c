@@ -47,60 +47,6 @@ struct psx_gpu gpu;
 static noinline int do_cmd_buffer(uint32_t *data, int count);
 static void finish_vram_transfer(int is_read);
 
-// TODO: go back to using bitfields once the endianness bugs are fixed
-uint32_t gpu_get_status_reg() {
-  uint32_t get_sr = 
-    (gpu.status.tx << 0) |
-    (gpu.status.ty << 4) |
-    (gpu.status.abr << 5) |
-    (gpu.status.tp << 7) |
-    (gpu.status.dtd << 9) |
-    (gpu.status.dfe << 10) |
-    (gpu.status.md << 11) |
-    (gpu.status.me << 12) |
-    (gpu.status.unkn << 13) |
-    (gpu.status.width1 << 16) |
-    (gpu.status.width0 << 17) |
-    (gpu.status.dheight << 19) |
-    (gpu.status.video << 20) |
-    (gpu.status.rgb24 << 21) |
-    (gpu.status.interlace << 22) |
-    (gpu.status.blanking << 23) |
-    (gpu.status.unkn2 << 24) |
-    (gpu.status.busy << 26) |
-    (gpu.status.img << 27) |
-    (gpu.status.com << 28) |
-    (gpu.status.dma << 29) |
-    (gpu.status.lcf << 31);
-  return get_sr;
-}
-
-// TODO: go back to using bitfields once the endianness bugs are fixed
-void gpu_set_status_reg(uint32_t sr) {
-    gpu.status.tx = (sr >> 0) & 0b1111;
-    gpu.status.ty = (sr >> 4) & 0b1;
-    gpu.status.abr = (sr >> 5) & 0b11;
-    gpu.status.tp = (sr >> 7) & 0b11;
-    gpu.status.dtd = (sr >> 9) & 0b1;
-    gpu.status.dfe = (sr >> 10) & 0b1;
-    gpu.status.md = (sr >> 11) & 0b1;
-    gpu.status.me = (sr >> 12) & 0b1;
-    gpu.status.unkn = (sr >> 13) & 0b111;
-    gpu.status.width1 = (sr >> 16) & 0b1;
-    gpu.status.width0 = (sr >> 17) & 0b11;
-    gpu.status.dheight = (sr >> 19) & 0b1;
-    gpu.status.video = (sr >> 20) & 0b1;
-    gpu.status.rgb24 = (sr >> 21) & 0b1;
-    gpu.status.interlace = (sr >> 22) & 0b1;
-    gpu.status.blanking = (sr >> 23) & 0b1;
-    gpu.status.unkn2 = (sr >> 24) & 0b11;
-    gpu.status.busy = (sr >> 26) & 0b1;
-    gpu.status.img = (sr >> 27) & 0b1;
-    gpu.status.com = (sr >> 28) & 0b1;
-    gpu.status.dma = (sr >> 29) & 0b11;
-    gpu.status.lcf = (sr >> 31) & 0b1;
-}
-
 static noinline void do_cmd_reset(void)
 {
   renderer_sync();
@@ -122,7 +68,7 @@ static noinline void do_reset(void)
   memset(gpu.regs, 0, sizeof(gpu.regs));
   for (i = 0; i < sizeof(gpu.ex_regs) / sizeof(gpu.ex_regs[0]); i++)
     gpu.ex_regs[i] = (0xe0 + i) << 24;
-  gpu_set_status_reg(0x14802000);
+  gpu.status.reg = 0x14802000;
   gpu.gp0 = 0;
   gpu.regs[3] = 1;
   gpu.screen.hres = gpu.screen.w = 256;
@@ -375,9 +321,9 @@ void GPUwriteStatus(uint32_t data)
       update_height();
       break;
     case 0x08:
-      gpu_set_status_reg((gpu_get_status_reg() & ~0x7f0000) | ((data & 0x3F) << 17) | ((data & 0x40) << 10));
-      gpu.screen.hres = hres[(gpu_get_status_reg() >> 16) & 7];
-      gpu.screen.vres = vres[(gpu_get_status_reg() >> 19) & 3];
+      gpu.status.reg = (gpu.status.reg & ~0x7f0000) | ((data & 0x3F) << 17) | ((data & 0x40) << 10);
+      gpu.screen.hres = hres[(gpu.status.reg >> 16) & 7];
+      gpu.screen.vres = vres[(gpu.status.reg >> 19) & 3];
       update_width();
       update_height();
       renderer_notify_res_change();
@@ -620,11 +566,9 @@ static noinline int do_cmd_buffer(uint32_t *data, int count)
       break;
   }
 
-  uint32_t sr = gpu_get_status_reg();
-  sr &= ~0x1fff;
-  sr |= gpu.ex_regs[1] & 0x7ff;
-  sr |= (gpu.ex_regs[6] & 3) << 11;
-  gpu_set_status_reg(sr);
+  gpu.status.reg &= ~0x1fff;
+  gpu.status.reg |= gpu.ex_regs[1] & 0x7ff;
+  gpu.status.reg |= (gpu.ex_regs[6] & 3) << 11;
 
   gpu.state.fb_dirty |= vram_dirty;
 
@@ -766,7 +710,7 @@ uint32_t GPUreadStatus(void)
   if (unlikely(gpu.cmd_len > 0))
     flush_cmd_buffer();
 
-  ret = gpu_get_status_reg();
+  ret = gpu.status.reg;
   log_io("gpu_read_status %08x\n", ret);
   return ret;
 }
@@ -796,7 +740,7 @@ long GPUfreeze(uint32_t type, struct GPUFreeze *freeze)
       for (int i = 0; i < countof(gpu.ex_regs); i++) {
         freeze->ulControl[i + 0xE0] = BESWAP32(gpu.ex_regs[i]);
       }
-      freeze->ulStatus = BESWAP32(gpu_get_status_reg());
+      freeze->ulStatus = BESWAP32(gpu.status.reg);
       break;
     case 0: // load
       renderer_sync();
@@ -807,8 +751,7 @@ long GPUfreeze(uint32_t type, struct GPUFreeze *freeze)
       for (int i = 0; i < countof(gpu.ex_regs); i++) {
         gpu.ex_regs[i] = BESWAP32(freeze->ulControl[i + 0xE0]);
       }
-
-      gpu_set_status_reg(BESWAP32(freeze->ulStatus));
+      gpu.status.reg = BESWAP32(freeze->ulStatus);
       gpu.cmd_len = 0;
       for (i = 8; i > 0; i--) {
         gpu.regs[i] ^= 1; // avoid reg change detection

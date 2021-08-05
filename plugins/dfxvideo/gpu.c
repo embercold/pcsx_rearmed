@@ -15,9 +15,9 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "gpu.h"
-#include "stdint.h"
+#include <stdint.h>
 #include "psemu_plugin_defs.h"
+#include "gpu.h"
 
 ////////////////////////////////////////////////////////////////////////
 // memory image of the PSX vram 
@@ -71,7 +71,7 @@ static const int  *skip_advice;
 // FPS library
 #include "fps.c"
 
-// Newer interface
+// Stub for the updated GPU plugin interface
 long CALLBACK GPUvBlank(void) { }
 
 ////////////////////////////////////////////////////////////////////////
