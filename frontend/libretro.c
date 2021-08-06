@@ -2543,6 +2543,19 @@ void retro_run(void)
       update_variables(true);
 
    stop = 0;
+   char msg[1024];
+   static int fr = 0;
+   snprintf(&msg, sizeof(msg), "frame=%i, rec=%s, bios=%s",
+      fr++, (psxCpu != &psxInt) ? "yes" : "no", found_bios ? "present" : "missing");
+   struct retro_message_ext osd_msg = {
+      msg, 10000, 1,
+      RETRO_LOG_INFO,
+      RETRO_MESSAGE_TARGET_OSD,
+      RETRO_MESSAGE_TYPE_STATUS,
+      -1
+   };
+   environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE_EXT, &osd_msg);
+
    psxCpu->Execute();
 
    video_cb((vout_fb_dirty || !vout_can_dupe || !duping_enable) ? vout_buf_ptr : NULL,

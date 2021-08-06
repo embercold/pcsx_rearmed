@@ -32,13 +32,15 @@
 #include "../psxhle.h"
 #include "../gte.h"
 
-#if !defined(HW_DOL) && !defined(HW_RVL)
-#error The ppc_dynarec only supports GC/Wii hosts
+#if !defined(HW_DOL) && !defined(HW_RVL) && !defined(HW_WUP)
+#error The ppc_dynarec only supports GC/Wii/Wii U hosts
 #endif
 
+#ifndef HW_WUP
 /* Cache control functions from libogc linked with Retroarch */
 void DCFlushRange(void *addr, uint32_t size);
 void ICInvalidateRange(void *addr, uint32_t size);
+#endif
 
 /* pcsx_rearmed_libretro compatibility shims */
 int stop;
@@ -84,7 +86,7 @@ returnPC:                                                                     \n
 
 /* variable declarations */
 static u32 psxRecLUT[0x010000];
-static char recMem[RECMEM_SIZE] __attribute__((aligned(32)));	/* the recompiled blocks will be here */
+static char * __attribute__((aligned(32))) recMem;	/* the recompiled blocks will be here */
 static char recRAM[0x200000] __attribute__((aligned(32)));	/* and the ptr to the blocks here */
 static char recROM[0x080000] __attribute__((aligned(32)));	/* and here */
 
@@ -1052,8 +1054,43 @@ static void rec##f() { \
     cop2readypc = pc + psxCP2time[_fFunct_(psxRegs.code)]; \
 }
 
+void *MEMCreateExpHeapEx(void *heap, uint32_t size, uint16_t flags);
+void *MEMDestroyExpHeap(void *heap);
+void *MEMAllocFromExpHeapEx(void *heap, uint32_t size, int alignment);
+void MEMFreeToExpHeap(void *heap, uint8_t *block);
+
+#ifdef HW_WUP
+static void *rwx_heap = 0;
+
+enum {
+   MEM_HEAP_FLAG_ZERO_ALLOCATED  = 1 << 0,
+   MEM_HEAP_FLAG_USE_LOCK        = 1 << 2,
+};
+#endif
+
 static int allocMem() {
     int i;
+
+#ifdef HW_WUP
+    // For WiiU, the recompiler memory is in MEMO
+	rwx_heap = MEMCreateExpHeapEx((u32*)0x00802000, 0x01000000 - 0x00802000,
+        MEM_HEAP_FLAG_ZERO_ALLOCATED | MEM_HEAP_FLAG_USE_LOCK);
+    if (rwx_heap) {
+        recMem = MEMAllocFromExpHeapEx(rwx_heap, RECMEM_SIZE, 0x100);
+        if (!recMem) {
+            // No memory == no recompiler
+            return -1;
+        }
+    } else {
+        // No heap == no recompiler
+        return -1;
+    }
+#else
+    recMem = calloc(1, RECMEM_SIZE);
+    if (!recMem) {
+        return -1;
+    }
+#endif
 
     for (i=0; i<0x80; i++) psxRecLUT[i + 0x0000] = (u32)&recRAM[(i & 0x1f) << 16];
     memcpy(psxRecLUT + 0x8000, psxRecLUT, 0x80 * 4);
@@ -1062,6 +1099,19 @@ static int allocMem() {
     for (i=0; i<0x08; i++) psxRecLUT[i + 0xbfc0] = (u32)&recROM[i << 16];
     
     return 0;
+}
+
+static void freeMem() {
+#ifdef HW_WUP
+    if (rwx_heap != 0) {
+        MEMFreeToExpHeap(rwx_heap, recMem); recMem = 0;
+        MEMDestroyExpHeap(rwx_heap); rwx_heap = 0;
+    }
+#else
+    if (recMem) {
+        free(recMem); recMem = 0;
+    }
+#endif
 }
 
 static int recInit() {
@@ -1083,6 +1133,7 @@ static void recReset() {
 
 static void recShutdown() {
     ppcShutdown();
+    freeMem();
 }
 
 static void recError() {
@@ -2863,8 +2914,10 @@ static void recRecompile() {
       iRet();
   }
 
+#ifndef HW_WUP  
   DCFlushRange((u8*)ptr,(u32)(u8*)ppcPtr-(u32)(u8*)ptr);
   ICInvalidateRange((u8*)ptr,(u32)(u8*)ppcPtr-(u32)(u8*)ptr);
+#endif
   
 #ifdef TAG_CODE
     sprintf((char *)ppcPtr, "PC=%08x", pcold);  //causes misalignment
