@@ -36,11 +36,9 @@
 #error The ppc_dynarec only supports GC/Wii/Wii U hosts
 #endif
 
-#ifndef HW_WUP
 /* Cache control functions from libogc linked with Retroarch */
 void DCFlushRange(void *addr, uint32_t size);
 void ICInvalidateRange(void *addr, uint32_t size);
-#endif
 
 /* pcsx_rearmed_libretro compatibility shims */
 int stop;
@@ -2914,10 +2912,8 @@ static void recRecompile() {
       iRet();
   }
 
-#ifndef HW_WUP  
   DCFlushRange((u8*)ptr,(u32)(u8*)ppcPtr-(u32)(u8*)ptr);
   ICInvalidateRange((u8*)ptr,(u32)(u8*)ppcPtr-(u32)(u8*)ptr);
-#endif
   
 #ifdef TAG_CODE
     sprintf((char *)ppcPtr, "PC=%08x", pcold);  //causes misalignment

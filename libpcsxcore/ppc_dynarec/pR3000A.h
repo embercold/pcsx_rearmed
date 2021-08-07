@@ -36,7 +36,7 @@
 /* defines */
 #if defined(HW_WUP)
 // For now this is in MEM0, so it needs to be conservative
-#define RECMEM_SIZE     (1*1024*1024)
+#define RECMEM_SIZE     (0x00F00000)
 #elif defined(HW_RVL)
 #define RECMEM_SIZE		(7*1024*1024)
 #else
