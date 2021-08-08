@@ -1057,32 +1057,13 @@ void *MEMDestroyExpHeap(void *heap);
 void *MEMAllocFromExpHeapEx(void *heap, uint32_t size, int alignment);
 void MEMFreeToExpHeap(void *heap, uint8_t *block);
 
-#ifdef HW_WUP
-static void *rwx_heap = 0;
-
-enum {
-   MEM_HEAP_FLAG_ZERO_ALLOCATED  = 1 << 0,
-   MEM_HEAP_FLAG_USE_LOCK        = 1 << 2,
-};
-#endif
-
 static int allocMem() {
     int i;
 
 #ifdef HW_WUP
     // For WiiU, the recompiler memory is in MEMO
-	rwx_heap = MEMCreateExpHeapEx((u32*)0x00802000, 0x01000000 - 0x00802000,
-        MEM_HEAP_FLAG_ZERO_ALLOCATED | MEM_HEAP_FLAG_USE_LOCK);
-    if (rwx_heap) {
-        recMem = MEMAllocFromExpHeapEx(rwx_heap, RECMEM_SIZE, 0x100);
-        if (!recMem) {
-            // No memory == no recompiler
-            return -1;
-        }
-    } else {
-        // No heap == no recompiler
-        return -1;
-    }
+    recMem = (typeof(recMem))0x00802000;
+    memset(recMem, 0, RECMEM_SIZE);
 #else
     recMem = calloc(1, RECMEM_SIZE);
     if (!recMem) {
@@ -1101,9 +1082,8 @@ static int allocMem() {
 
 static void freeMem() {
 #ifdef HW_WUP
-    if (rwx_heap != 0) {
-        MEMFreeToExpHeap(rwx_heap, recMem); recMem = 0;
-        MEMDestroyExpHeap(rwx_heap); rwx_heap = 0;
+    if (recMem) {
+        recMem = 0;
     }
 #else
     if (recMem) {
