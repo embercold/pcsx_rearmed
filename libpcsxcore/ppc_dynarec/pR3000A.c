@@ -32,8 +32,8 @@
 #include "../psxhle.h"
 #include "../gte.h"
 
-#if !defined(HW_DOL) && !defined(HW_RVL)
-#error The ppc_dynarec only supports GC/Wii hosts
+#if !defined(HW_DOL) && !defined(HW_RVL) && !defined(HW_WUP)
+#error The ppc_dynarec only supports GC/Wii/WiiU hosts
 #endif
 
 /* Cache control functions from libogc linked with Retroarch */
@@ -84,9 +84,9 @@ returnPC:                                                                     \n
 
 /* variable declarations */
 static u32 psxRecLUT[0x010000];
-static char recMem[RECMEM_SIZE] __attribute__((aligned(32)));	/* the recompiled blocks will be here */
-static char recRAM[0x200000] __attribute__((aligned(32)));	/* and the ptr to the blocks here */
-static char recROM[0x080000] __attribute__((aligned(32)));	/* and here */
+static char * __attribute__((aligned(32))) recMem; /* the recompiled blocks will be here */
+static char recRAM[0x200000] __attribute__((aligned(32))); /* and the ptr to the blocks here */
+static char recROM[0x080000] __attribute__((aligned(32))); /* and here */
 
 static u32 pc;			/* recompiler pc */
 static u32 pcold;		/* recompiler oldpc */
@@ -1055,6 +1055,18 @@ static void rec##f() { \
 static int allocMem() {
     int i;
 
+#ifdef HW_WUP
+    // For WiiU, a slice of RWX memory left from the exploit is used
+    recMem = (typeof(recMem)) WUP_RWX_MEM_BASE;
+    memset(recMem, 0, RECMEM_SIZE);
+#else
+    // GC/Wii can use any memory
+    recMem = calloc(1, RECMEM_SIZE);
+    if (!recMem) {
+        return -1;
+    }
+#endif
+
     for (i=0; i<0x80; i++) psxRecLUT[i + 0x0000] = (u32)&recRAM[(i & 0x1f) << 16];
     memcpy(psxRecLUT + 0x8000, psxRecLUT, 0x80 * 4);
     memcpy(psxRecLUT + 0xa000, psxRecLUT, 0x80 * 4);
@@ -1082,6 +1094,13 @@ static void recReset() {
 }
 
 static void recShutdown() {
+#ifndef HW_WUP
+    if (recMem) {
+        free(recMem);
+        recMem = 0;
+    }
+#endif
+
     ppcShutdown();
 }
 

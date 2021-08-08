@@ -33,13 +33,15 @@
 #include "../r3000a.h"
 #include "../psxhle.h"
 
-/* defines */
 #if defined(HW_WUP)
-#define RECMEM_SIZE     (64*1024*1024)
+#define WUP_RWX_MEM_BASE 0x00802000
+#define WUP_RWX_MEM_END 0x01000000 (0x01000000 - 0x00802000)
+// WiiU has just shy of 8MiB RWX RAM available using the current method
+#define RECMEM_SIZE (WUP_RWX_MEM_END - WUP_RWX_MEM_BASE)
 #elif defined(HW_RVL)
-#define RECMEM_SIZE		(7*1024*1024)
+#define RECMEM_SIZE	(7*1024*1024)
 #else
-#define RECMEM_SIZE		(6*1024*1024)
+#define RECMEM_SIZE	(6*1024*1024)
 #endif
 
 #define NUM_REGISTERS	34

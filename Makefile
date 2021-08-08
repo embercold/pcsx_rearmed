@@ -188,9 +188,8 @@ endif
 ifeq "$(BUILTIN_GPU)" "peops"
 CFLAGS += -DGPU_PEOPS
 # The peops plugin doesn't follow the C strict aliasing rules
-plugins/gpulib/%.o: CFLAGS += -fno-strict-aliasing
 plugins/dfxvideo/%.o: CFLAGS += -fno-strict-aliasing
-plugins/dfxvideo/gpulib_if.o: plugins/dfxvideo/prim.c plugins/dfxvideo/soft.c
+plugins/dfxvideo/%.o: plugins/dfxvideo/prim.c plugins/dfxvideo/soft.c
 OBJS += plugins/dfxvideo/gpulib_if.o
 ifeq "$(THREAD_RENDERING)" "1"
 CFLAGS += -DTHREAD_RENDERING
