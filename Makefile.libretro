@@ -274,22 +274,24 @@ else ifeq ($(platform), xenon)
 	CFLAGS += -D__ppc__ -D__powerpc__ -DPCSX_BIG_ENDIAN
 	CFLAGS += -D__LIBXENON__ -m32
 
-# Nintendo GameCube / Wii / Wii U
-else ifneq (,$(filter $(platform),ngc wii wiiu))
+# Nintendo Wii / Wii U
+else ifneq (,$(filter $(platform),wii wiiu))
 	TARGET := $(TARGET_NAME)_libretro_$(platform).a
 	CC  = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
 	CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
 	AR  = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
-	ifeq ($(platform), ngc)
-		CFLAGS += -DHW_DOL -mrvl
-	else ifeq ($(platform), wii)
+	ifeq ($(platform), wii)
 		CFLAGS += -DHW_RVL -mrvl
+		CFLAGS += -Ifrontend/wii -I$(LIBOGC)/include
+		OBJS += frontend/wii/polyfill_wii.o
+		THREAD_RENDERING := 1
 	else ifeq ($(platform), wiiu)
 		CFLAGS += -DHW_WUP -mwup
+		THREAD_RENDERING := 1
 	endif
 	CFLAGS += -D__ppc__ -D__powerpc__ -DPCSX_BIG_ENDIAN
 	CFLAGS += -DGEKKO -mcpu=750 -meabi -mhard-float
-	CFLAGS += -DNO_DYLIB -DNO_PTHREAD -DNO_MMAP -DFAULTY_POSIX
+	CFLAGS += -DNO_DYLIB -DNO_MMAP -DFAULTY_POSIX
 	STATIC_LINKING := 1
     BUILTIN_GPU := peops
 	DYNAREC := ppc

@@ -245,7 +245,11 @@ static void *playthread(void *param)
 		}
 
 		if (!cdr.Muted && playing) {
+#ifdef PCSX_BIG_ENDIAN
+			if (!cddaBigEndian) {
+#else
 			if (cddaBigEndian) {
+#endif
 				for (i = 0; i < s / 2; i++) {
 					tmp = sndbuffer[i * 2];
 					sndbuffer[i * 2] = sndbuffer[i * 2 + 1];

@@ -29,6 +29,14 @@
 #define TRUE 1
 #define BOOL unsigned short
 
+#ifdef PCSX_BIG_ENDIAN
+#define BESWAP16(X) ((((X) >> 8) & 0xFF) | (((X) & 0xFF) << 8))
+#define BESWAP32(X) (BESWAP16((X) >> 16) | (BESWAP16(X) << 16))
+#else
+#define BESWAP16(X) (X)
+#define BESWAP32(X) (X)
+#endif
+
 typedef struct {
 	uint32_t *cmd_list;
 	int count;
@@ -299,7 +307,7 @@ static int scan_cmd_list(uint32_t *data, int count, int *last_cmd)
 
 	while (pos < count) {
 		uint32_t *list = data + pos;
-		cmd = list[0] >> 24;
+		cmd = BESWAP32(list[0]) >> 24;
 		len = 1 + cmd_lengths[cmd];
 
 		switch (cmd) {
@@ -310,12 +318,12 @@ static int scan_cmd_list(uint32_t *data, int count, int *last_cmd)
 			case 0x34 ... 0x37:
 			case 0x3c ... 0x3f:
 				gpu.ex_regs[1] &= ~0x1ff;
-				gpu.ex_regs[1] |= list[4 + ((cmd >> 4) & 1)] & 0x1ff;
+				gpu.ex_regs[1] |= BESWAP32(list[4 + ((cmd >> 4) & 1)]) & 0x1ff;
 				break;
 			case 0x48 ... 0x4F:
 				for (v = 3; pos + v < count; v++)
 				{
-					if ((list[v] & 0xf000f000) == 0x50005000)
+					if ((BESWAP32(list[v]) & 0xf000f000) == 0x50005000)
 						break;
 				}
 				len += v - 3;
@@ -323,14 +331,14 @@ static int scan_cmd_list(uint32_t *data, int count, int *last_cmd)
 			case 0x58 ... 0x5F:
 				for (v = 4; pos + v < count; v += 2)
 				{
-					if ((list[v] & 0xf000f000) == 0x50005000)
+					if ((BESWAP32(list[v]) & 0xf000f000) == 0x50005000)
 						break;
 				}
 				len += v - 4;
 				break;
 			default:
 				if ((cmd & 0xf8) == 0xe0)
-					gpu.ex_regs[cmd & 7] = list[0];
+					gpu.ex_regs[cmd & 7] = BESWAP32(list[0]);
 				break;
 		}
 
