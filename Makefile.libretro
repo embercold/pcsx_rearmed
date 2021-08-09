@@ -4,6 +4,8 @@ DEBUG ?= 0
 WANT_ZLIB ?= 1
 HAVE_CHD ?= 1
 USE_LIBRETRO_VFS ?= 0
+LIBOGC ?= ../retroarch/wii/libogc
+LIBWIIU ?= ../retroarch/wiiu
 
 # Dynarec options: lightrec, ari64, ppc, none
 DYNAREC ?= lightrec
@@ -274,25 +276,25 @@ else ifeq ($(platform), xenon)
 	CFLAGS += -D__ppc__ -D__powerpc__ -DPCSX_BIG_ENDIAN
 	CFLAGS += -D__LIBXENON__ -m32
 
-# Nintendo Wii / Wii U
-else ifneq (,$(filter $(platform),wii wiiu))
+# Nintendo GC/Wii/WiiU
+else ifneq (,$(filter $(platform),gc wii wiiu))
 	TARGET := $(TARGET_NAME)_libretro_$(platform).a
 	CC  = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
 	CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
 	AR  = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
-	ifeq ($(platform), wii)
-		CFLAGS += -DHW_RVL -mrvl
-		CFLAGS += -Ifrontend/wii -I$(LIBOGC)/include
-		OBJS += frontend/wii/polyfill_wii.o
-		THREAD_RENDERING := 1
+	ifeq ($(platform), gc)
+		CFLAGS += -DHW_DOL -mrvl -I$(LIBOGC)/include
+	else ifeq ($(platform), wii)
+		CFLAGS += -DHW_RVL -mrvl -I$(LIBOGC)/include
 	else ifeq ($(platform), wiiu)
-		CFLAGS += -DHW_WUP -mwup
-		THREAD_RENDERING := 1
+		CFLAGS += -DHW_WUP -mwup -I$(LIBWIIU)/include
 	endif
 	CFLAGS += -D__ppc__ -D__powerpc__ -DPCSX_BIG_ENDIAN
 	CFLAGS += -DGEKKO -mcpu=750 -meabi -mhard-float
-	CFLAGS += -DNO_DYLIB -DNO_MMAP -DFAULTY_POSIX
+	CFLAGS += -Ifrontend/wii -DNO_DYLIB -DNO_MMAP -DFAULTY_POSIX
+	OBJS += frontend/wii/polyfill.o
 	STATIC_LINKING := 1
+	THREAD_RENDERING := 1
     BUILTIN_GPU := peops
 	DYNAREC := ppc
 	LIBDL :=
