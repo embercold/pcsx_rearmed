@@ -35,7 +35,7 @@
 
 #if defined(HW_WUP)
 #define WUP_RWX_MEM_BASE 0x00802000
-#define WUP_RWX_MEM_END 0x01000000 (0x01000000 - 0x00802000)
+#define WUP_RWX_MEM_END 0x01000000
 // WiiU has just shy of 8MiB RWX RAM available using the current method
 #define RECMEM_SIZE (WUP_RWX_MEM_END - WUP_RWX_MEM_BASE)
 #elif defined(HW_RVL)

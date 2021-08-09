@@ -5,7 +5,7 @@
 
 // Semaphores
 
-// sem_t must match one provided by <gccore.h>
+// sem_t must be compatible to one on the host platform
 typedef uint32_t sem_t;
 
 int sem_init(sem_t *sem, int pshared, unsigned int value);

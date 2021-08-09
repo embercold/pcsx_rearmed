@@ -5,13 +5,13 @@
 
 #define PTHREAD_COND_INITIALIZER 0
 
-// lwp_t, mutex_t and cond_t must match those provided by <gccore.h>
+// lwp_t, mutex_t and cond_t must be compatible to those on the host platforms
 typedef uint32_t pthread_t;
-typedef int pthread_attr_t;
+typedef int32_t pthread_attr_t;
 typedef uint32_t pthread_mutex_t;
-typedef int pthread_mutexattr_t;
+typedef int32_t pthread_mutexattr_t;
 typedef uint32_t pthread_cond_t;
-typedef int pthread_condattr_t;
+typedef int32_t pthread_condattr_t;
 
 // Threads
 
