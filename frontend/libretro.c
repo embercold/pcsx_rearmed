@@ -2791,7 +2791,7 @@ void retro_init(void)
 #elif defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L) && !defined(FAULTY_POSIX)
    posix_memalign(&vout_buf, 16, VOUT_MAX_WIDTH * VOUT_MAX_HEIGHT * 2);
 #else
-   vout_buf = malloc(VOUT_MAX_WIDTH * VOUT_MAX_HEIGHT * 2);
+   vout_buf = memalign(16, VOUT_MAX_WIDTH * VOUT_MAX_HEIGHT * 2);
 #endif
 
    vout_buf_ptr = vout_buf;

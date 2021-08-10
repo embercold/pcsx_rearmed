@@ -27,15 +27,12 @@
 // <sys/mman.h>
 //
 
-#define WII_ALLOWED_FD -1
-#define WII_ALLOWED_ADDR NULL
-
-static void *mmapped_addrs[256] /* = { 0 }; */;
+static void *mmapped_addrs[256] = { 0 };
 
 void *mmap(void *addr, size_t length,
     int prot, int flags, int fd, off_t offset)
 {
-    if (length == 0 || addr != WII_ALLOWED_ADDR || fd != WII_ALLOWED_FD) {
+    if (length == 0 || addr != NULL || fd != -1) {
         return addr;
     }
     // Return the existing address if it's already allocated
@@ -120,23 +117,27 @@ int sem_wait(sem_t *sem)
 int sem_init(sem_t *sem, int pshared, unsigned int value)
 {
     *sem = (sem_t) calloc(1, sizeof(OSSemaphore));
-    OSInitSemaphore((OSSemaphore *)sem, value);
+    OSInitSemaphore((OSSemaphore *)*sem, value);
+    return 0;
 }
 
 int sem_destroy(sem_t *sem)
 {
     free((OSSemaphore *)*sem);
     *sem = 0;
+    return 0;
 }
 
 int sem_post(sem_t *sem)
 {
-    OSSignalSemaphore((OSSemaphore *)sem);
+    OSSignalSemaphore((OSSemaphore *)*sem);
+    return 0;
 }
 
 int sem_wait(sem_t *sem)
 {
-    OSWaitSemaphore((OSSemaphore *)sem);
+    OSWaitSemaphore((OSSemaphore *)*sem);
+    return 0;
 }
 
 #endif

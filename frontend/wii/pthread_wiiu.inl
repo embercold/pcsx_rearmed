@@ -38,11 +38,12 @@ int pthread_create(pthread_t *thread,
 {
    OSThread *t = memalign(8, sizeof(OSThread));
    void *stack = memalign(32, STACKSIZE);
-   bool ret = OSCreateThread((OSThread *)t, (OSThreadEntryPointFn)start_routine, 
-      (uint32_t)arg, NULL, (void*)(((uint32_t)stack)+STACKSIZE), STACKSIZE, 8, OS_THREAD_ATTRIB_AFFINITY_ANY);
+   bool ret = OSCreateThread(t, (OSThreadEntryPointFn)start_routine, 
+      (uint32_t)arg, NULL, (void*)(((uint32_t)stack)+STACKSIZE), STACKSIZE,
+      8, OS_THREAD_ATTRIB_AFFINITY_ANY);
    if(ret == true)
    {
-      OSResumeThread((OSThread *)t);
+      OSResumeThread(t);
       *thread = (pthread_t)t;
    }
    else
@@ -59,7 +60,7 @@ int pthread_mutex_init(pthread_mutex_t *mutex,
       const pthread_mutexattr_t *attr)
 {
    OSMutex *m = malloc(sizeof(OSMutex));
-   OSInitMutex((OSMutex *)m);
+   OSInitMutex(m);
    *mutex = (pthread_mutex_t)m;
    return 0;
 }

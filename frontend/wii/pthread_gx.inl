@@ -73,7 +73,9 @@
 #endif
 
 #ifndef OSCreateThread
-#define OSCreateThread(thread, func, intarg, ptrarg, stackbase, stacksize, priority, attrs) LWP_CreateThread(thread, func, ptrarg, stackbase, stacksize, priority)
+#define OSCreateThread(thread, \
+   func, intarg, ptrarg, stackbase, stacksize, priority, attrs) \
+   LWP_CreateThread(thread, func, ptrarg, stackbase, stacksize, priority)
 #endif
 
 #define STACKSIZE (8 * 1024)
@@ -92,7 +94,7 @@ int pthread_create(pthread_t *thread,
       const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg)
 {
    *thread = 0;
-   return OSCreateThread(thread, start_routine, 0 /* unused */, arg,
+   return OSCreateThread(/* TODO types*/thread, start_routine, 0 /* unused */, arg,
          0, STACKSIZE, 64, 0 /* unused */);
 }
 
