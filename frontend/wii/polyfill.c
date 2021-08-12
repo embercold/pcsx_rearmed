@@ -23,52 +23,35 @@
 
 #define arr_countof(X) (sizeof(X) / sizeof(*(X)))
 
+#ifndef NDEBUG
+#define TRACE(MSG, ...) \
+    printf("[%s:%i]" MSG "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#else
+#define TRACE(...)
+#endif
+
 //
 // <sys/mman.h>
 //
 
-static void *mmapped_addrs[256] = { 0 };
-
 void *mmap(void *addr, size_t length,
     int prot, int flags, int fd, off_t offset)
 {
-    if (length == 0 || addr != NULL || fd != -1) {
-        return addr;
-    }
-    // Return the existing address if it's already allocated
-    for (int i = 0; i < arr_countof(mmapped_addrs); i++) {
-        if (mmapped_addrs[i] == addr) {
-            return mmapped_addrs[i];
-        }
-    }
-    // Otherwise allocate memory and store it into the table
-    for (int i = 0; i < arr_countof(mmapped_addrs); i++) {
-        if (mmapped_addrs[i] == NULL) {
-            mmapped_addrs[i] = calloc(1, length);
-            return mmapped_addrs[i];
-        }
-    }
-    // If the table is full, memory will leak
-    return calloc(1, length);
+    void *block = calloc(1, length);
+    TRACE("addr=%08p length=%u prot=%08X ->block=%08p", addr, length, prot, block);
+    return block;
 }
 
 int munmap(void *addr, size_t length)
 {
-    // Only free addresses allocated by mmap
-    if (addr != NULL) {
-        for (int i = 0; i < arr_countof(mmapped_addrs); i++) {
-            if (mmapped_addrs[i] == addr) {
-                free(addr);
-                mmapped_addrs[i] = 0;
-                break;
-            }
-        }
-    }
+    TRACE("addr=%p length=%u", addr, length);
+    free(addr);
     return 0;
 }
 
-int mprotect(void *addr, size_t len, int prot)
+int mprotect(void *addr, size_t length, int prot)
 {
+    TRACE("addr=%08p length=%u prot=%08p", addr, length, prot);
     return 0;
 }
 
@@ -77,12 +60,91 @@ int mprotect(void *addr, size_t len, int prot)
 // <pthread.h>
 //
 
-// Headers here were internal to libretro-common and had to be repurposed
-// so that they could be used in the core directly
-#if defined(HW_DOL) || defined(HW_RVL)
-#include "pthread_gx.inl"
+// Threads
+
+
+#if defined(HW_DOL) | defined(HW_RVL)
+
+#define WII_STACKSIZE 16*1024
+
+int pthread_create(pthread_t *restrict thread,
+    const pthread_attr_t *restrict attr,
+    void *(*start_routine)(void *),
+    void *restrict arg)
+{
+    TRACE("thread=%p", thread);
+    return (LWP_CreateThread(thread, start_routine, arg, NULL, WII_STACKSIZE, 0) < 0) ? -1 : 0;
+}
+
+void pthread_exit(void *retval)
+{
+    TRACE("");
+    /* Do nothing and hope for the best */
+}
+
+int pthread_join(pthread_t thread, void **retval)
+{
+    TRACE("thread=%p", thread);
+    return (LWP_JoinThread(thread, retval) < 0) ? -1 : 0;
+}
+
+// Mutexes
+
+int pthread_mutex_init(pthread_mutex_t *mutex,
+    const pthread_mutexattr_t *attr)
+{
+    TRACE("mutex=%p", mutex);
+    bool recursive = attr && (*attr & PTHREAD_MUTEX_RECURSIVE);
+    return (LWP_MutexInit(mutex, recursive) < 0) ? -1 : 0;
+}
+
+int pthread_mutex_destroy(pthread_mutex_t *mutex)
+{
+    TRACE("mutex=%p", mutex);
+    return (LWP_MutexDestroy(*mutex) < 0) ? -1 : 0;
+}
+
+int pthread_mutex_lock(pthread_mutex_t *mutex)
+{
+    // TRACE("mutex=%p", mutex);
+    return (LWP_MutexLock(*mutex) < 0) ? -1 : 0;
+}
+
+int pthread_mutex_unlock(pthread_mutex_t *mutex)
+{
+    // TRACE("mutex=%p", mutex);
+    return (LWP_MutexUnlock(*mutex) < 0) ? -1 : 0;
+}
+
+// Condition variables
+
+int pthread_cond_init(pthread_cond_t *cond,
+    const pthread_condattr_t *attr)
+{
+    TRACE("cond=%p", cond);
+    return (LWP_CondInit(cond) < 0) ? -1 : 0;
+}
+
+int pthread_cond_destroy(pthread_cond_t *cond)
+{
+    TRACE("cond=%p", cond);
+    return (LWP_CondDestroy(*cond) < 0) ? -1 : 0;
+}
+
+int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
+{
+    TRACE("cond=%p mutex=%p", cond, mutex);
+    return (LWP_CondWait(*cond, *mutex) < 0) ? -1 : 0;
+}
+
+int pthread_cond_signal(pthread_cond_t *cond)
+{
+    TRACE("cond=%p", cond);
+    return (LWP_CondSignal(*cond) < 0) ? -1 : 0;
+}
+
 #else
-#include "pthread_wiiu.inl"
+
 #endif
 
 
@@ -94,21 +156,25 @@ int mprotect(void *addr, size_t len, int prot)
 
 int sem_init(sem_t *sem, int pshared, unsigned int value)
 {
+    TRACE("sem=%p pshared=%i value=%u", sem, pshared, value);
     return (LWP_SemInit(sem, value, -1) < 0) ? -1 : 0;
 }
 
 int sem_destroy(sem_t *sem)
 {
+    TRACE("sem=%p ", sem);
     return (LWP_SemDestroy(*sem) < 0) ? -1 : 0;
 }
 
 int sem_post(sem_t *sem)
 {
+    TRACE("sem=%p ", sem);
     return (LWP_SemPost(*sem) < 0) ? -1 : 0;
 }
 
 int sem_wait(sem_t *sem)
 {
+    TRACE("sem=%p ", sem);
     return (LWP_SemWait(*sem) < 0) ? -1 : 0;
 }
 
@@ -159,6 +225,7 @@ int sem_wait(sem_t *sem)
 
 long sysconf(int name)
 {
+    TRACE("name=%i", name);
     switch (name) {
     case _SC_PAGE_SIZE:
         return WII_PAGE_SIZE;

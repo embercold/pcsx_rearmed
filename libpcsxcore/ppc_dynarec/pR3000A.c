@@ -68,8 +68,8 @@ recRun:                                                                       \n
     stwu	1, -80(1)   /* increment and store sp (-80 == -((32-14)*4+8)) */  \n\
     /* execute code */                                                        \n\
     mtctr	3           /* move func ptr to ctr */                            \n\
-    mr	31, 4           /* save hw1 to r31 */                                 \n\
-    mr	30, 5           /* save hw2 to r30 */                                 \n\
+    mr	    31, 4       /* save hw1 to r31 */                                 \n\
+    mr	    30, 5       /* save hw2 to r30 */                                 \n\
     bctrl               /* branch to ctr (*func) */                           \n\
                                                                               \n\
 /* void returnPC() */                                                         \n\
@@ -1947,14 +1947,14 @@ static void recLHU() {
                         if (!_Rt_) return;
                         
                         LIW(PutHWReg32(_Rt_), (u32)&rcnts[(addr >> 4) & 0x3].mode);
-                        LHZ(PutHWReg32(_Rt_), 0, GetHWReg32(_Rt_));
+                        LWZ(PutHWReg32(_Rt_), 0, GetHWReg32(_Rt_));
                         return;
     
                     case 0x1f801108: case 0x1f801118: case 0x1f801128:
                         if (!_Rt_) return;
 
                         LIW(PutHWReg32(_Rt_), (u32)&rcnts[(addr >> 4) & 0x3].target);
-                        LHZ(PutHWReg32(_Rt_), 0, GetHWReg32(_Rt_));
+                        LWZ(PutHWReg32(_Rt_), 0, GetHWReg32(_Rt_));
                         return;
                     }
         }

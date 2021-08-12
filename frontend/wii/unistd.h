@@ -3,6 +3,7 @@
 
 #include <sys/types.h>
 
+// This is hopefully provided by the header above:
 // typedef __useconds_t useconds_t;
 
 #define _SC_PAGE_SIZE 1

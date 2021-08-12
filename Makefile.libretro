@@ -283,18 +283,19 @@ else ifneq (,$(filter $(platform),ngc wii wiiu))
 	CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
 	AR  = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
 	ifeq ($(platform), ngc)
-		CFLAGS += -DHW_DOL -mogc -I$(LIBOGC)/include
+		CFLAGS += -DGEKKO -DHW_DOL -mogc -I$(LIBOGC)/include
 	else ifeq ($(platform), wii)
-		CFLAGS += -DHW_RVL -mrvl -I$(LIBOGC)/include
+		CFLAGS += -DGEKKO -DHW_RVL -mrvl -I$(LIBOGC)/include
 	else ifeq ($(platform), wiiu)
-		CFLAGS += -DHW_WUP -mwup -I$(LIBWIIU)/include
+		CFLAGS += -DWIIU -DHW_WUP -mwup -I$(LIBWIIU)/include
 	endif
+	CFLAGS += -mcpu=750 -meabi -mhard-float
 	CFLAGS += -D__ppc__ -D__powerpc__ -DPCSX_BIG_ENDIAN
-	CFLAGS += -DGEKKO -mcpu=750 -meabi -mhard-float
-	CFLAGS += -Ifrontend/wii -DNO_DYLIB -DNO_MMAP -DFAULTY_POSIX
+	CFLAGS += -DNO_PTHREAD -DNO_DYLIB -DNO_MMAP -DFAULTY_POSIX
+	CFLAGS += -Ifrontend/wii
 	OBJS += frontend/wii/polyfill.o
 	STATIC_LINKING := 1
-	THREAD_RENDERING := 1
+	THREAD_RENDERING := 0
     BUILTIN_GPU := peops
 	DYNAREC := ppc
 	LIBDL :=
