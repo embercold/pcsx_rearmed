@@ -871,7 +871,9 @@ static int _OpenPlugins(void) {
 	SPU_registerCallback(SPUirq);
 	SPU_registerScheduleCb(SPUschedule);
 	// pcsx-rearmed: we handle gpu elsewhere
-	//ret = GPU_open(&gpuDisp, "PCSX", NULL);
+#ifndef HAVE_LIBRETRO
+	ret = GPU_open(&gpuDisp, "PCSX", NULL);
+#endif
 	//if (ret < 0) { SysMessage(_("Error opening GPU plugin!")); return -1; }
 	ret = PAD1_open(&gpuDisp);
 	if (ret < 0) { SysMessage(_("Error opening Controller 1 plugin!")); return -1; }

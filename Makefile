@@ -176,6 +176,10 @@ plugins/dfsound/out.o: CFLAGS += -DHAVE_LIBRETRO
 endif
 
 # builtin gpu
+ifeq "$(BUILTIN_GPU)" "native"
+# The native_gpu plugin doesn't use the gpulib
+OBJS += plugins/gpu_native/plugin.o
+else
 OBJS += plugins/gpulib/gpu.o plugins/gpulib/vout_pl.o
 ifeq "$(BUILTIN_GPU)" "neon"
 CFLAGS += -DGPU_NEON
@@ -214,6 +218,7 @@ OBJS += plugins/gpulib/gpulib_thread_if.o
 endif
 plugins/gpu_unai/gpulib_if.o: CFLAGS += -DREARMED -O3 
 CC_LINK = $(CXX)
+endif
 endif
 
 # cdrcimg
