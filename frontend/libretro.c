@@ -2516,6 +2516,29 @@ static void print_internal_fps(void)
       frame_count = 0;
 }
 
+void print_msg(char *text) {
+   if (msg_interface_version >= 1) {
+      struct retro_message_ext msg = {
+         text, 3000, 1,
+         RETRO_LOG_INFO,
+         RETRO_MESSAGE_TARGET_OSD,
+         RETRO_MESSAGE_TYPE_STATUS,
+         -1
+      };
+      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE_EXT, &msg);
+   }
+   else
+   {
+      struct retro_message msg = {
+         text, 180
+      };
+      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+   }
+}
+
+uint32_t perf_frame = 0;
+uint64_t perf_cycles_total;
+uint64_t perf_cycles_gpu;
 
 void retro_run(void)
 {
@@ -2543,7 +2566,28 @@ void retro_run(void)
       update_variables(true);
 
    stop = 0;
+
+   wiiu_start_perf_counters();
+
+   perf_frame++;
+
+   if (perf_frame % 60 == 0) {
+      perf_cycles_total = 0;
+      perf_cycles_gpu = 0;
+   }
+
+   WIIU_PERF_START();
    psxCpu->Execute();
+   WIIU_PERF_END(total, +=);
+
+   wiiu_stop_perf_counters();
+
+   if (perf_frame % 60 == 0) {
+      char text[1024];
+      double gpu_cycles_per = (double)perf_cycles_gpu / (double)perf_cycles_total * 100.0;
+      snprintf(text, sizeof(text), "%.2f%% GPU", gpu_cycles_per);
+      print_msg(text);
+   }
 
    video_cb((vout_fb_dirty || !vout_can_dupe || !duping_enable) ? vout_buf_ptr : NULL,
         vout_width, vout_height, vout_width * 2);

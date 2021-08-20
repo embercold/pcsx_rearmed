@@ -51,7 +51,11 @@ EXTRA_LDFLAGS =
 ifeq ($(platform), unix)
 	TARGET := $(TARGET_NAME)_libretro.so
 	fpic := -fPIC
-	THREAD_RENDERING = 1
+# Match the WiiU options for debugging
+CFLAGS += -DNO_PTHREAD -DNO_DYLIB -DNO_MMAP -DFAULTY_POSIX
+THREAD_RENDERING := 0
+#BUILTIN_GPU := native
+
 ifneq ($(findstring SunOS,$(shell uname -s)),)
 	CC = gcc
 endif
@@ -287,7 +291,7 @@ else ifneq (,$(filter $(platform),ngc wii wiiu))
 	else ifeq ($(platform), wii)
 		CFLAGS += -DGEKKO -DHW_RVL -mrvl -I$(LIBOGC)/include
 	else ifeq ($(platform), wiiu)
-		CFLAGS += -DWIIU -DHW_WUP -mwup -I$(LIBWIIU)/include
+		CFLAGS += -DWIIU -DHW_WUP -D__WIIU__ -D__WUT__ -I$(LIBWIIU)/include
 	endif
 	CFLAGS += -mcpu=750 -meabi -mhard-float
 	CFLAGS += -D__ppc__ -D__powerpc__ -DPCSX_BIG_ENDIAN

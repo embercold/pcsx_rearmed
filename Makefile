@@ -19,6 +19,8 @@ CXXFLAGS += $(CFLAGS)
 # Suppress minor warnings for dependencies
 deps/%: CFLAGS += -Wno-unused -Wno-unused-function
 
+CFLAGS += -include wiiu_perf.h
+
 all: config.mak target_ plugins_
 
 ifndef NO_CONFIG_MAK

@@ -339,7 +339,9 @@ int do_cmd_list(uint32_t *list, int list_len, int *last_cmd)
     else if ((cmd & 0xf8) == 0xe0)
       gpu.ex_regs[cmd & 7] = LE2HOST32(*list);
 
+    WIIU_PERF_START();
     primTableJ[cmd]((void *)list);
+    WIIU_PERF_END(gpu, +=);
 
     switch(cmd)
     {
