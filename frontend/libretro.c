@@ -2571,22 +2571,19 @@ void retro_run(void)
 
    perf_frame++;
 
-   if (perf_frame % 60 == 0) {
-      perf_cycles_total = 0;
-      perf_cycles_gpu = 0;
-   }
-
    WIIU_PERF_START();
    psxCpu->Execute();
    WIIU_PERF_END(total, +=);
 
    wiiu_stop_perf_counters();
 
-   if (perf_frame % 60 == 0) {
+   if (perf_frame % 60 == 59) {
       char text[1024];
       double gpu_cycles_per = (double)perf_cycles_gpu / (double)perf_cycles_total * 100.0;
       snprintf(text, sizeof(text), "%.2f%% GPU", gpu_cycles_per);
       print_msg(text);
+      perf_cycles_total = 0;
+      perf_cycles_gpu = 0;
    }
 
    video_cb((vout_fb_dirty || !vout_can_dupe || !duping_enable) ? vout_buf_ptr : NULL,
